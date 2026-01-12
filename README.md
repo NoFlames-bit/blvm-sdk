@@ -8,15 +8,15 @@ Provides the institutional layer for Bitcoin governance, offering reusable gover
 
 ## Architecture Position
 
-Tier 5 of the 6-tier Bitcoin Commons architecture (BLLVM technology stack):
+Tier 5 of the 6-tier Bitcoin Commons architecture (BLVM technology stack):
 
 ```
-1. bllvm-spec (Orange Paper - mathematical foundation)
-2. bllvm-consensus (pure math implementation)
-3. bllvm-protocol (Bitcoin abstraction)
-4. bllvm-node (full node implementation)
-5. bllvm-sdk (composition + governance libraries)
-6. bllvm-commons (governance enforcement - GitHub App)
+1. blvm-spec (Orange Paper - mathematical foundation)
+2. blvm-consensus (pure math implementation)
+3. blvm-protocol (Bitcoin abstraction)
+4. blvm-node (full node implementation)
+5. blvm-sdk (composition + governance libraries)
+6. blvm-commons (governance enforcement - GitHub App)
 ```
 
 ## Core Components
@@ -25,16 +25,17 @@ Tier 5 of the 6-tier Bitcoin Commons architecture (BLLVM technology stack):
 - Cryptographic key management for governance operations
 - Signature creation and verification using Bitcoin-compatible standards
 - Multisig threshold logic for collective decision making
+- Nested multisig support for team-based governance
 - Message formats for releases, module approvals, and budget decisions
 
 ### CLI Tools
-- `bllvm-keygen` - Generate governance keypairs
-- `bllvm-sign` - Sign governance messages
-- `bllvm-verify` - Verify signatures and multisig thresholds
-- `bllvm-compose` - Declarative node composition from modules
-- `bllvm-sign-binary` - Sign binary files
-- `bllvm-verify-binary` - Verify binary file signatures
-- `bllvm-aggregate-signatures` - Aggregate multiple signatures
+- `blvm-keygen` - Generate governance keypairs
+- `blvm-sign` - Sign governance messages
+- `blvm-verify` - Verify signatures and multisig thresholds
+- `blvm-compose` - Declarative node composition from modules
+- `blvm-sign-binary` - Sign binary files
+- `blvm-verify-binary` - Verify binary file signatures
+- `blvm-aggregate-signatures` - Aggregate multiple signatures
 
 ### Composition Framework
 - Declarative node composition from modules
@@ -46,7 +47,7 @@ Tier 5 of the 6-tier Bitcoin Commons architecture (BLLVM technology stack):
 ### As a Library
 
 ```rust
-use bllvm_sdk::governance::{
+use blvm_sdk::governance::{
     GovernanceKeypair, GovernanceMessage, Multisig
 };
 
@@ -71,17 +72,17 @@ let valid = multisig.verify(&message.to_signing_bytes(), &[signature])?;
 
 ```bash
 # Generate a keypair
-bllvm-keygen --output alice.key --format pem
+blvm-keygen --output alice.key --format pem
 
 # Sign a release
-bllvm-sign release \
+blvm-sign release \
   --version v1.0.0 \
   --commit abc123 \
   --key alice.key \
   --output signature.txt
 
 # Verify signatures
-bllvm-verify release \
+blvm-verify release \
   --version v1.0.0 \
   --commit abc123 \
   --signatures sig1.txt,sig2.txt,sig3.txt,sig4.txt,sig5.txt,sig6.txt \
@@ -92,7 +93,7 @@ bllvm-verify release \
 ## Features
 
 - **Governance Primitives**: Cryptographic key management and signature verification
-- **CLI Tools**: `bllvm-keygen`, `bllvm-sign`, `bllvm-verify`, `bllvm-compose`, `bllvm-sign-binary`, `bllvm-verify-binary`, `bllvm-aggregate-signatures`
+- **CLI Tools**: `blvm-keygen`, `blvm-sign`, `blvm-verify`, `blvm-compose`, `blvm-sign-binary`, `blvm-verify-binary`, `blvm-aggregate-signatures`
 - **Multisig Support**: Threshold logic for collective decision making
 - **Bitcoin-Compatible**: Uses Bitcoin message signing standards
 - **Composition Framework**: Declarative node composition from modules
