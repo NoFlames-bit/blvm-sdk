@@ -16,7 +16,7 @@ Tier 5 of the 6-tier Bitcoin Commons architecture (BLVM technology stack):
 3. blvm-protocol (Bitcoin abstraction)
 4. blvm-node (full node implementation)
 5. blvm-sdk (composition + governance libraries)
-6. blvm-commons (governance enforcement - GitHub App)
+6. blvm-commons (governance enforcement)
 ```
 
 ## Core Components
