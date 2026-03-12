@@ -1,6 +1,6 @@
 # API Reference
 
-Complete API documentation for the bllvm-sdk governance crypto library.
+Complete API documentation for the blvm-sdk governance crypto library.
 
 ## Core Types
 
@@ -168,12 +168,12 @@ pub type GovernanceResult<T> = Result<T, GovernanceError>;
 
 ## CLI Tools
 
-### bllvm-keygen
+### blvm-keygen
 
 Generate governance keypairs.
 
 ```bash
-bllvm-keygen [OPTIONS]
+blvm-keygen [OPTIONS]
 
 Options:
     -o, --output <OUTPUT>    Output file for the keypair [default: governance.key]
@@ -182,12 +182,12 @@ Options:
     --show-private          Show private key in output
 ```
 
-### bllvm-sign
+### blvm-sign
 
 Sign governance messages.
 
 ```bash
-bllvm-sign [OPTIONS] <COMMAND>
+blvm-sign [OPTIONS] <COMMAND>
 
 Options:
     -o, --output <OUTPUT>    Output file for the signature [default: signature.txt]
@@ -200,12 +200,12 @@ Commands:
     budget                  Sign a budget decision message
 ```
 
-### bllvm-verify
+### blvm-verify
 
 Verify governance signatures.
 
 ```bash
-bllvm-verify [OPTIONS] <COMMAND>
+blvm-verify [OPTIONS] <COMMAND>
 
 Options:
     -f, --format <FORMAT>    Output format (text, json) [default: text]
@@ -224,7 +224,7 @@ Commands:
 ### Basic Usage
 
 ```rust
-use bllvm_sdk::governance::{
+use blvm_sdk::governance::{
     GovernanceKeypair, GovernanceMessage, Multisig, sign_message, verify_signature
 };
 
@@ -248,7 +248,7 @@ assert!(verified);
 ### Multisig Usage
 
 ```rust
-use bllvm_sdk::governance::{
+use blvm_sdk::governance::{
     GovernanceKeypair, GovernanceMessage, Multisig, sign_message
 };
 
@@ -279,7 +279,7 @@ assert!(verified);
 ### Error Handling
 
 ```rust
-use bllvm_sdk::governance::{GovernanceResult, GovernanceError};
+use blvm_sdk::governance::{GovernanceResult, GovernanceError};
 
 fn process_governance() -> GovernanceResult<()> {
     let keypair = GovernanceKeypair::generate()?;

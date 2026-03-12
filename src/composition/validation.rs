@@ -11,7 +11,7 @@ pub fn validate_composition(
     registry: &ModuleRegistry,
 ) -> Result<ValidationResult> {
     let mut errors = Vec::new();
-    let mut warnings = Vec::new();
+    let warnings = Vec::new();
     let mut dependencies = Vec::new();
 
     // Resolve all module names

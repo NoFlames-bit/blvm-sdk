@@ -1,6 +1,6 @@
 //! Module Manifest
 //!
-//! Re-export from bllvm-node.
+//! Re-export from blvm-node.
 //!
 //! Module manifest parsing and validation for module.toml files.
 

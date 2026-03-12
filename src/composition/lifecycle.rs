@@ -15,7 +15,7 @@ use tokio::sync::Mutex;
 pub struct ModuleLifecycle {
     /// Module registry reference
     pub(crate) registry: ModuleRegistry,
-    /// Reference to bllvm-node ModuleManager (if available)
+    /// Reference to blvm-node ModuleManager (if available)
     module_manager: Option<Arc<Mutex<ModuleManager>>>,
     /// Module status cache
     status_cache: HashMap<String, ModuleStatus>,

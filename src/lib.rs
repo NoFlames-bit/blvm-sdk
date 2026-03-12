@@ -11,7 +11,7 @@
 //! This is **Tier 5** of the 5-tier BTCDecoded architecture:
 //!
 //! <!--
-//! bllvm-spec (Orange Paper) -> bllvm-consensus -> bllvm-protocol -> bllvm-node -> bllvm-sdk
+//! blvm-spec (Orange Paper) -> blvm-consensus -> blvm-protocol -> blvm-node -> blvm-sdk
 //! -->
 //!
 //! ## Core Components
@@ -23,14 +23,14 @@
 //! - **Message formats** for releases, module approvals, and budget decisions
 //!
 //! ### CLI Tools
-//! - `bllvm-keygen` - Generate governance keypairs
-//! - `bllvm-sign` - Sign governance messages
-//! - `bllvm-verify` - Verify signatures and multisig thresholds
+//! - `blvm-keygen` - Generate governance keypairs
+//! - `blvm-sign` - Sign governance messages
+//! - `blvm-verify` - Verify signatures and multisig thresholds
 //!
 //! ## Quick Start
 //!
 //! ```rust
-//! use bllvm_sdk::{
+//! use blvm_sdk::{
 //!     GovernanceKeypair, GovernanceMessage, Multisig, sign_message
 //! };
 //!

@@ -8,7 +8,7 @@
 //! Example: m/44'/0'/0'/0/0 (Bitcoin mainnet first address)
 
 use crate::governance::bip32::{
-    derive_child_private, derive_master_key, ExtendedPrivateKey, ExtendedPublicKey,
+    derive_master_key, ExtendedPrivateKey, ExtendedPublicKey,
 };
 use crate::governance::error::{GovernanceError, GovernanceResult};
 

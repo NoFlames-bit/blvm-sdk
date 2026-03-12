@@ -1,4 +1,4 @@
-//! bllvm-compose - Node Composition CLI Tool
+//! blvm-compose - Node Composition CLI Tool
 //!
 //! Command-line interface for composing Bitcoin nodes from modules.
 

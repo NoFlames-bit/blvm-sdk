@@ -5,7 +5,7 @@
 use crate::composition::types::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 /// Node configuration from TOML file
 #[derive(Debug, Clone, Serialize, Deserialize)]

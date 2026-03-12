@@ -1,8 +1,8 @@
 //! Module Development APIs
 //!
-//! Provides APIs for developing modules that extend bllvm-node.
+//! Provides APIs for developing modules that extend blvm-node.
 //!
-//! This module re-exports the necessary types and traits from `bllvm-node` to provide
+//! This module re-exports the necessary types and traits from `blvm-node` to provide
 //! a clean, developer-friendly interface for module development.
 
 pub mod ipc;

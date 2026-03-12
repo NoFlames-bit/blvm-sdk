@@ -98,8 +98,6 @@ impl NestedMultisig {
         let mut team_details = Vec::new();
 
         for team in &self.teams {
-            let team_sigs = team_signatures.get(&team.id).map(|v| v.len()).unwrap_or(0);
-
             // Verify signatures for this team
             let mut valid_sigs = 0;
             if let Some(sigs) = team_signatures.get(&team.id) {

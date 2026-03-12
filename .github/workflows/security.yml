@@ -14,23 +14,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Checkout bllvm-protocol dependency
+      - name: Checkout blvm-protocol dependency
         uses: actions/checkout@v4
         with:
-          repository: BTCDecoded/bllvm-protocol
-          path: _temp-protocol-engine
+          repository: BTCDecoded/blvm-protocol
+          path: _temp-blvm-protocol
       
-      - name: Checkout bllvm-consensus dependency
+      - name: Checkout blvm-consensus dependency
         uses: actions/checkout@v4
         with:
-          repository: BTCDecoded/bllvm-consensus
-          path: _temp-consensus-proof
+          repository: BTCDecoded/blvm-consensus
+          path: _temp-blvm-consensus
       
-      - name: Checkout bllvm-node dependency
+      - name: Checkout blvm-node dependency
         uses: actions/checkout@v4
         with:
-          repository: BTCDecoded/bllvm-node
-          path: _temp-node
+          repository: BTCDecoded/blvm-node
+          path: _temp-blvm-node
       
       - name: Move dependencies to parent directory
         run: |
@@ -42,17 +42,17 @@ jobs:
           ls -la .. || true
           echo "Checking for temp directories:"
           ls -la _temp-* || echo "No _temp-* directories found"
-          if [ -d "../bllvm-protocol" ]; then rm -rf ../bllvm-protocol; fi
-          if [ -d "../bllvm-consensus" ]; then rm -rf ../bllvm-consensus; fi
-          if [ -d "../bllvm-node" ]; then rm -rf ../bllvm-node; fi
-          if [ -d "_temp-protocol-engine" ]; then mv _temp-protocol-engine ../bllvm-protocol; else echo "ERROR: _temp-protocol-engine not found!"; exit 1; fi
-          if [ -d "_temp-consensus-proof" ]; then mv _temp-consensus-proof ../bllvm-consensus; else echo "ERROR: _temp-consensus-proof not found!"; exit 1; fi
-          if [ -d "_temp-node" ]; then mv _temp-node ../bllvm-node; else echo "ERROR: _temp-node not found!"; exit 1; fi
+          if [ -d "../blvm-protocol" ]; then rm -rf ../blvm-protocol; fi
+          if [ -d "../blvm-consensus" ]; then rm -rf ../blvm-consensus; fi
+          if [ -d "../blvm-node" ]; then rm -rf ../blvm-node; fi
+          if [ -d "_temp-blvm-protocol" ]; then mv _temp-blvm-protocol ../blvm-protocol; else echo "ERROR: _temp-blvm-protocol not found!"; exit 1; fi
+          if [ -d "_temp-blvm-consensus" ]; then mv _temp-blvm-consensus ../blvm-consensus; else echo "ERROR: _temp-blvm-consensus not found!"; exit 1; fi
+          if [ -d "_temp-blvm-node" ]; then mv _temp-blvm-node ../blvm-node; else echo "ERROR: _temp-blvm-node not found!"; exit 1; fi
           echo "✅ Dependencies moved successfully"
           echo "Listing parent directory after move:"
-          ls -la .. | grep bllvm || echo "No bllvm directories found in parent"
-          echo "Verifying bllvm-node exists:"
-          if [ -f "../bllvm-node/Cargo.toml" ]; then echo "✅ bllvm-node/Cargo.toml found"; else echo "ERROR: bllvm-node/Cargo.toml not found!"; exit 1; fi
+          ls -la .. | grep blvm || echo "No blvm directories found in parent"
+          echo "Verifying blvm-node exists:"
+          if [ -f "../blvm-node/Cargo.toml" ]; then echo "✅ blvm-node/Cargo.toml found"; else echo "ERROR: blvm-node/Cargo.toml not found!"; exit 1; fi
       
       - name: Install Rust
         uses: dtolnay/rust-toolchain@master

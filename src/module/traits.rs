@@ -1,6 +1,6 @@
 //! Module Traits
 //!
-//! Re-export from bllvm-node for module developers.
+//! Re-export from blvm-node for module developers.
 //!
 //! These traits define the core interfaces that modules must implement
 //! and the APIs they can use to interact with the node.

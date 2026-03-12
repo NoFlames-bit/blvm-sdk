@@ -331,8 +331,6 @@ pub fn mnemonic_from_entropy(entropy: &[u8]) -> GovernanceResult<Vec<String>> {
 
     for i in 0..word_count {
         let bit_offset = i * 11;
-        let byte_offset = bit_offset / 8;
-        let bit_in_byte = bit_offset % 8;
 
         // Extract 11-bit value
         let mut word_index = 0u16;
@@ -389,8 +387,6 @@ pub fn mnemonic_to_entropy(mnemonic: &[String]) -> GovernanceResult<Vec<u8>> {
 
     for (i, &word_idx) in word_indices.iter().enumerate() {
         let bit_offset = i * 11;
-        let byte_offset = bit_offset / 8;
-        let bit_in_byte = bit_offset % 8;
 
         // Write 11-bit word index
         for bit in 0..11 {

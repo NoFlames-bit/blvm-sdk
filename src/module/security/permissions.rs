@@ -1,6 +1,6 @@
 //! Module Permissions
 //!
-//! Re-export from bllvm-node.
+//! Re-export from blvm-node.
 //!
 //! Permission types and sets for module access control.
 

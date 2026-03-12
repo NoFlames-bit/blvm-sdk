@@ -1,16 +1,14 @@
 //! Module Registry
 //!
 //! High-level module registry API for discovering, installing, updating,
-//! and removing modules. Wraps bllvm-node module registry functionality.
+//! and removing modules. Wraps blvm-node module registry functionality.
 
 use crate::composition::conversion::*;
 use crate::composition::types::*;
 use blvm_node::module::registry::{
-    DiscoveredModule as RefDiscoveredModule, ModuleDependencies as RefModuleDependencies,
-    ModuleDiscovery as RefModuleDiscovery, ModuleManifest as RefModuleManifest,
+    ModuleDependencies as RefModuleDependencies, ModuleDiscovery as RefModuleDiscovery,
 };
 use blvm_node::module::traits::ModuleError as RefModuleError;
-use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 /// Module registry for managing module lifecycle
@@ -106,7 +104,7 @@ impl ModuleRegistry {
     }
 
     /// Update module to new version
-    pub fn update_module(&mut self, name: &str, new_version: &str) -> Result<ModuleInfo> {
+    pub fn update_module(&mut self, name: &str, _new_version: &str) -> Result<ModuleInfo> {
         // Check if module exists
         let _current = self.get_module(name, None)?;
 

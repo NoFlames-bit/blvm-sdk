@@ -21,7 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.1.0] - 2024-01-XX
 
 ### Added
-- Initial release of developer-sdk
+- Initial release of blvm-sdk
 - Governance keypair generation and management
 - Signature creation and verification
 - Multisig threshold logic and validation

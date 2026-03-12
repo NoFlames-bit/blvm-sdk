@@ -222,8 +222,6 @@ pub fn derive_child_public(
         .add_exp_tweak(&secp, &il_scalar)
         .map_err(|_| GovernanceError::InvalidKey("Point addition failed".to_string()))?;
 
-    let parent_fingerprint = calculate_fingerprint(&parent.public_key.serialize());
-
     Ok(ExtendedPublicKey {
         depth: parent.depth + 1,
         parent_fingerprint,

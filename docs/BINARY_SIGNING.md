@@ -6,13 +6,13 @@ The binary signing tools provide cryptographic verification of release artifacts
 
 ## Tools
 
-### bllvm-sign-binary
+### blvm-sign-binary
 
 Signs binaries, verification bundles, and SHA256SUMS files.
 
 **Usage**:
 ```bash
-bllvm-sign-binary --key <private-key-file> --output <signature-file> <target>
+blvm-sign-binary --key <private-key-file> --output <signature-file> <target>
 ```
 
 **Targets**:
@@ -30,15 +30,15 @@ bllvm-sign-binary --key <private-key-file> --output <signature-file> <target>
 **Example**:
 ```bash
 # Sign a binary
-bllvm-sign-binary \
+blvm-sign-binary \
   --key maintainer-key.pem \
   --output signature.json \
-  binary --file target/release/bllvm-node \
+  binary --file target/release/blvm-node \
   --binary-type application \
   --version "0.1.0"
 
 # Sign SHA256SUMS
-bllvm-sign-binary \
+blvm-sign-binary \
   --key maintainer-key.pem \
   --output checksums.sig \
   checksums --file SHA256SUMS
@@ -46,13 +46,13 @@ bllvm-sign-binary \
 
 ---
 
-### bllvm-verify-binary
+### blvm-verify-binary
 
 Verifies binary signatures against public keys.
 
 **Usage**:
 ```bash
-bllvm-verify-binary <target> --signature <signature-file>
+blvm-verify-binary <target> --signature <signature-file>
 ```
 
 **Targets**:
@@ -70,14 +70,14 @@ bllvm-verify-binary <target> --signature <signature-file>
 **Example**:
 ```bash
 # Verify binary signature
-bllvm-verify-binary \
-  binary --file bllvm-node \
+blvm-verify-binary \
+  binary --file blvm-node \
   --signature signature.json \
   --public-keys maintainers.pub \
   --threshold 3
 
 # Verify checksums
-bllvm-verify-binary \
+blvm-verify-binary \
   checksums --file SHA256SUMS \
   --signature checksums.sig \
   --public-keys maintainers.pub \
@@ -86,13 +86,13 @@ bllvm-verify-binary \
 
 ---
 
-### bllvm-aggregate-signatures
+### blvm-aggregate-signatures
 
 Aggregates multiple signatures for multisig verification.
 
 **Usage**:
 ```bash
-bllvm-aggregate-signatures --signatures <sig1> <sig2> ... --output <aggregated-sig>
+blvm-aggregate-signatures --signatures <sig1> <sig2> ... --output <aggregated-sig>
 ```
 
 **Options**:
@@ -103,7 +103,7 @@ bllvm-aggregate-signatures --signatures <sig1> <sig2> ... --output <aggregated-s
 **Example**:
 ```bash
 # Aggregate 3 maintainer signatures
-bllvm-aggregate-signatures \
+blvm-aggregate-signatures \
   --signatures sig1.json sig2.json sig3.json \
   --output aggregated.json
 ```
@@ -116,22 +116,22 @@ bllvm-aggregate-signatures \
 
 1. **Each maintainer signs independently**:
    ```bash
-   bllvm-sign-binary --key maintainer1.pem binary --file bllvm-node
-   bllvm-sign-binary --key maintainer2.pem binary --file bllvm-node
-   bllvm-sign-binary --key maintainer3.pem binary --file bllvm-node
+   blvm-sign-binary --key maintainer1.pem binary --file blvm-node
+   blvm-sign-binary --key maintainer2.pem binary --file blvm-node
+   blvm-sign-binary --key maintainer3.pem binary --file blvm-node
    ```
 
 2. **Aggregate signatures**:
    ```bash
-   bllvm-aggregate-signatures \
+   blvm-aggregate-signatures \
      --signatures sig1.json sig2.json sig3.json \
      --output aggregated.json
    ```
 
 3. **Verify aggregated signature**:
    ```bash
-   bllvm-verify-binary \
-     binary --file bllvm-node \
+   blvm-verify-binary \
+     binary --file blvm-node \
      --signature aggregated.json \
      --public-keys maintainers.pub \
      --threshold 3
@@ -141,15 +141,15 @@ bllvm-aggregate-signatures \
 
 1. **Download binary and signature**:
    ```bash
-   wget https://releases.btcdecoded.org/bllvm-node
-   wget https://releases.btcdecoded.org/bllvm-node.sig
+   wget https://releases.btcdecoded.org/blvm-node
+   wget https://releases.btcdecoded.org/blvm-node.sig
    ```
 
 2. **Verify signature**:
    ```bash
-   bllvm-verify-binary \
-     binary --file bllvm-node \
-     --signature bllvm-node.sig \
+   blvm-verify-binary \
+     binary --file blvm-node \
+     --signature blvm-node.sig \
      --public-keys maintainers.pub \
      --threshold 3
    ```

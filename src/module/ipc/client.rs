@@ -1,6 +1,6 @@
 //! IPC Client
 //!
-//! Re-export from bllvm-node.
+//! Re-export from blvm-node.
 //!
 //! Client-side IPC implementation that modules use to communicate with the node.
 

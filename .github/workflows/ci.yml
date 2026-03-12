@@ -518,16 +518,16 @@ jobs:
           echo "version_tag=${VERSION_TAG}" >> $GITHUB_OUTPUT
           echo "✅ Releasing version: ${VERSION_TAG}"
       
-      - name: Get latest bllvm-node version from crates.io
+      - name: Get latest blvm-node version from crates.io
         id: node-version
         run: |
-          NODE_VER=$(cargo search bllvm-node --limit 1 2>/dev/null | head -1 | sed -E 's/^bllvm-node = "([^"]+)".*/\1/' || echo "")
+          NODE_VER=$(cargo search blvm-node --limit 1 2>/dev/null | head -1 | sed -E 's/^blvm-node = "([^"]+)".*/\1/' || echo "")
           if [ -z "$NODE_VER" ]; then
-            echo "❌ bllvm-node not found on crates.io. It must be published first."
+            echo "❌ blvm-node not found on crates.io. It must be published first."
             exit 1
           fi
           echo "version=${NODE_VER}" >> $GITHUB_OUTPUT
-          echo "Using bllvm-node version: ${NODE_VER}"
+          echo "Using blvm-node version: ${NODE_VER}"
       
       - name: Update Cargo.toml to use crates.io dependencies
         run: |
@@ -537,13 +537,13 @@ jobs:
           # Update version
           sed -i "s/^version = \".*\"/version = \"${VERSION}\"/" Cargo.toml
           
-          # Update bllvm-node dependency to use crates.io version
-          sed -i 's|bllvm-node = { path = "\.\./bllvm-node"|bllvm-node = "'"${NODE_VER}"'"|g' Cargo.toml
+          # Update blvm-node dependency to use crates.io version
+          sed -i 's|blvm-node = { path = "\.\./blvm-node"|blvm-node = "'"${NODE_VER}"'"|g' Cargo.toml
           
           echo "Updated Cargo.toml:"
           echo "  version: ${VERSION}"
-          echo "  bllvm-node: ${NODE_VER}"
-          grep -E "^(version|bllvm-node)" Cargo.toml
+          echo "  blvm-node: ${NODE_VER}"
+          grep -E "^(version|blvm-node)" Cargo.toml
       
       - name: Check for crates.io token
         run: |
