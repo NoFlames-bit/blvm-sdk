@@ -57,8 +57,10 @@
 //! ```
 
 pub mod cli;
+#[cfg(feature = "node")]
 pub mod composition;
 pub mod governance;
+#[cfg(any(feature = "node", feature = "wasm-modules"))]
 pub mod module;
 
 // Re-export main types for convenience
@@ -70,14 +72,17 @@ pub use governance::{
 // Re-export governance functions
 pub use governance::signatures::{sign_message, verify_signature};
 
-// Re-export composition framework
+// Re-export composition framework (requires node)
+#[cfg(feature = "node")]
 pub use composition::{
     ComposedNode, ModuleHealth, ModuleInfo, ModuleLifecycle, ModuleRegistry, ModuleSource,
     ModuleSpec, ModuleStatus, NetworkType, NodeComposer, NodeConfig, NodeSpec,
 };
 
-// Re-export module development APIs
+// Re-export module development APIs (requires node)
+#[cfg(feature = "node")]
 pub use module::{
+    open_module_db,
     CorrelationId,
     EventMessage,
     EventPayload,
@@ -104,3 +109,11 @@ pub use module::{
     ResponseMessage,
     ResponsePayload,
 };
+
+/// WASM module runtime (when `wasm-modules` feature is enabled).
+#[cfg(feature = "wasm-modules")]
+pub use module::wasm::{WasmHostContext, WasmModuleInstance, WasmStorage, WasmTree};
+
+/// WASM loader for blvm-node (when both `node` and `wasm-modules` are enabled).
+#[cfg(all(feature = "node", feature = "wasm-modules"))]
+pub use module::wasm::BlvmSdkWasmLoader;

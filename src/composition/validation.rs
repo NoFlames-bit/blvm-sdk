@@ -30,10 +30,15 @@ pub fn validate_composition(
 
         match registry.get_module(&module_spec.name, module_spec.version.as_deref()) {
             Ok(info) => {
-                // Check capabilities compatibility
-                // TODO: Add capability validation logic
-
-                // Add to dependencies
+                // Capability validation: required deps must be in composition
+                for (dep_name, _ver) in &info.dependencies {
+                    if !module_names.contains(dep_name) {
+                        errors.push(format!(
+                            "Module '{}' requires '{}' which is not in composition",
+                            module_spec.name, dep_name
+                        ));
+                    }
+                }
                 dependencies.push(info);
             }
             Err(e) => {
@@ -57,8 +62,26 @@ pub fn validate_composition(
         }
     }
 
-    // Check for module conflicts
-    // TODO: Add conflict detection (e.g., two modules providing same capability)
+    // Check for capability conflicts: two modules providing same capability
+    let mut capability_providers: std::collections::HashMap<String, Vec<String>> =
+        std::collections::HashMap::new();
+    for dep in &dependencies {
+        for cap in &dep.capabilities {
+            capability_providers
+                .entry(cap.clone())
+                .or_default()
+                .push(dep.name.clone());
+        }
+    }
+    for (cap, providers) in &capability_providers {
+        if providers.len() > 1 {
+            errors.push(format!(
+                "Capability '{}' provided by multiple modules: {}",
+                cap,
+                providers.join(", ")
+            ));
+        }
+    }
 
     // Check for circular dependencies
     // (Already handled by dependency resolution, but double-check here)

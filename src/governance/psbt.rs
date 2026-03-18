@@ -398,9 +398,17 @@ fn deserialize_map(data: &[u8]) -> GovernanceResult<(HashMap<Vec<u8>, Vec<u8>>, 
             break;
         }
 
-        // Read key
+        // Read key (S-013: BIP174-style limits to prevent OOM)
+        const MAX_PSBT_KEY_LEN: usize = 520;
+        const MAX_PSBT_VALUE_LEN: usize = 520_000;
         let (key_len, len_offset) = read_compact_size(&data[offset..])?;
         offset += len_offset;
+        if key_len > MAX_PSBT_KEY_LEN {
+            return Err(GovernanceError::InvalidInput(format!(
+                "PSBT key too long: {} bytes (max: {})",
+                key_len, MAX_PSBT_KEY_LEN
+            )));
+        }
 
         if offset + key_len > data.len() {
             return Err(GovernanceError::InvalidInput(
@@ -413,6 +421,12 @@ fn deserialize_map(data: &[u8]) -> GovernanceResult<(HashMap<Vec<u8>, Vec<u8>>, 
         // Read value
         let (value_len, len_offset) = read_compact_size(&data[offset..])?;
         offset += len_offset;
+        if value_len > MAX_PSBT_VALUE_LEN {
+            return Err(GovernanceError::InvalidInput(format!(
+                "PSBT value too long: {} bytes (max: {})",
+                value_len, MAX_PSBT_VALUE_LEN
+            )));
+        }
 
         if offset + value_len > data.len() {
             return Err(GovernanceError::InvalidInput(

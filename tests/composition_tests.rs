@@ -554,11 +554,15 @@ fn test_module_source_path() {
 #[test]
 fn test_module_source_registry() {
     // Test ModuleSource::Registry variant
-    let source = ModuleSource::Registry("https://example.com/registry".to_string());
+    let source = ModuleSource::Registry {
+        url: "https://example.com/registry".to_string(),
+        name: None,
+    };
 
     match source {
-        ModuleSource::Registry(url) => {
+        ModuleSource::Registry { url, name } => {
             assert_eq!(url, "https://example.com/registry");
+            assert_eq!(name, None);
         }
         _ => panic!("Expected Registry variant"),
     }

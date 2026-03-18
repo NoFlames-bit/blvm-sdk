@@ -234,7 +234,7 @@ pub fn derive_child_public(
 /// Calculate key fingerprint (first 4 bytes of RIPEMD160(SHA256(pubkey)))
 fn calculate_fingerprint(pubkey: &[u8]) -> [u8; 4] {
     use ripemd::{Digest as RipemdDigest, Ripemd160};
-    use sha2::{Digest, Sha256};
+    use sha2::Sha256;
 
     // SHA256(pubkey)
     let mut sha256 = Sha256::new();

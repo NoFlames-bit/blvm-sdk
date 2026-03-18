@@ -25,6 +25,7 @@ serde = { version = "=1.0.228", features = ["derive"] }
 serde_json = "=1.0.108"
 
 # Error handling
+anyhow = "=1.0.93"
 thiserror = "=1.0.69"
 
 # Encoding
@@ -38,17 +39,28 @@ rand = "=0.8.5"
 chrono = { version = "=0.4.35", features = ["serde"] }
 
 # CLI dependencies
+blvm-sdk-macros = { path = "./crates/blvm-sdk-macros" }
 clap = { version = "=4.4.11", features = ["derive"] }
 
 # Composition framework dependencies
 toml = "=0.8.2"
-blvm-node = "0.1.0"
-tokio = { version = "=1.48.0", features = ["rt", "macros", "sync"] }
+blvm-node = { path = "../blvm-node", optional = true }
+tokio = { version = "=1.48.0", features = ["rt", "macros", "sync", "fs"] }
+tracing = "0.1"
+reqwest = { version = "0.12", features = ["json"], optional = true }
+git2 = { version = "0.18", optional = true }
+wasmtime = { version = "22", optional = true, default-features = false, features = ["wat", "cranelift", "runtime"] }
+
+[features]
+default = ["node"]
+registry = ["dep:reqwest"]
+git = ["dep:git2"]
+node = ["dep:blvm-node"]
+wasm-modules = ["dep:wasmtime", "node"]
 
 # Local development: Use [patch.crates-io] to override with local paths
 # For production/CI, these patches are removed and crates.io versions are used
 [patch.crates-io]
-blvm-node = { path = "../blvm-node" }
 blvm-protocol = { path = "../blvm-protocol" }
 blvm-consensus = { path = "../blvm-consensus" }
 
@@ -56,6 +68,14 @@ blvm-consensus = { path = "../blvm-consensus" }
 # Testing
 criterion = "=0.5.1"  # Benchmarking
 tempfile = "=3.8.1"  # Temporary files for tests
+
+[[example]]
+name = "hello-module"
+path = "examples/hello-module/main.rs"
+
+[[example]]
+name = "demo-module"
+path = "examples/demo-module/main.rs"
 
 [[bin]]
 name = "blvm-keygen"
@@ -84,3 +104,7 @@ path = "src/bin/blvm-verify-binary.rs"
 [[bin]]
 name = "blvm-aggregate-signatures"
 path = "src/bin/blvm-aggregate-signatures.rs"
+
+[[bin]]
+name = "blvm-registry"
+path = "src/bin/blvm-registry.rs"

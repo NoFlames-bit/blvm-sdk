@@ -139,6 +139,30 @@ impl From<RefModuleError> for crate::composition::types::CompositionError {
                     msg
                 ))
             }
+            RefModuleError::Config(msg) => {
+                crate::composition::types::CompositionError::InvalidConfiguration(msg)
+            }
+            RefModuleError::Rpc(msg) => {
+                crate::composition::types::CompositionError::InstallationFailed(format!(
+                    "RPC error: {}",
+                    msg
+                ))
+            }
+            RefModuleError::Migration(msg) => {
+                crate::composition::types::CompositionError::InstallationFailed(format!(
+                    "Migration error: {}",
+                    msg
+                ))
+            }
+            RefModuleError::Cli(msg) => {
+                crate::composition::types::CompositionError::InstallationFailed(format!(
+                    "CLI error: {}",
+                    msg
+                ))
+            }
+            RefModuleError::Other(msg) => {
+                crate::composition::types::CompositionError::InstallationFailed(msg)
+            }
         }
     }
 }

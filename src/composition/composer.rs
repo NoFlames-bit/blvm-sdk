@@ -72,8 +72,10 @@ impl NodeComposer {
                 .registry
                 .get_module(&module_spec.name, module_spec.version.as_deref())?;
 
-            // Start module via lifecycle (now async)
-            self.lifecycle_mut().start_module(&info.name).await?;
+            // Start module via lifecycle with config from ModuleSpec
+            self.lifecycle_mut()
+                .start_module(&info.name, Some(&module_spec.config))
+                .await?;
             let status = self.lifecycle().get_module_status(&info.name).await?;
             let health = self.lifecycle().health_check(&info.name).await?;
 

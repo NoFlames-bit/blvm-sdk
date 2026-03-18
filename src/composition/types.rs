@@ -37,8 +37,12 @@ pub struct ModuleInfo {
 pub enum ModuleSource {
     /// Install from local path
     Path(PathBuf),
-    /// Install from remote registry (URL)
-    Registry(String),
+    /// Install from remote registry (URL, optional module name to select from index)
+    Registry {
+        url: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        name: Option<String>,
+    },
     /// Install from git repository
     Git { url: String, tag: Option<String> },
 }

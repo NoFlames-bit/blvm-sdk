@@ -2,14 +2,23 @@
 //!
 //! Handles starting, stopping, restarting, and health checking of modules.
 
-use crate::composition::conversion::*;
 use crate::composition::registry::ModuleRegistry;
 use crate::composition::types::*;
 use blvm_node::module::manager::ModuleManager;
-use blvm_node::module::traits::ModuleMetadata as RefModuleMetadata;
+use blvm_node::module::traits::{ModuleMetadata as RefModuleMetadata, ModuleState as RefModuleState};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::Mutex;
+
+fn module_state_to_status(s: RefModuleState) -> ModuleStatus {
+    match s {
+        RefModuleState::Running => ModuleStatus::Running,
+        RefModuleState::Stopped => ModuleStatus::Stopped,
+        RefModuleState::Initializing => ModuleStatus::Initializing,
+        RefModuleState::Stopping => ModuleStatus::Stopping,
+        RefModuleState::Error(msg) => ModuleStatus::Error(msg),
+    }
+}
 
 /// Module lifecycle manager
 pub struct ModuleLifecycle {
@@ -37,33 +46,43 @@ impl ModuleLifecycle {
         self
     }
 
-    /// Start a module
-    pub async fn start_module(&mut self, name: &str) -> Result<()> {
+    /// Start a module with optional config (from ModuleSpec.config)
+    pub async fn start_module(
+        &mut self,
+        name: &str,
+        config: Option<&HashMap<String, serde_json::Value>>,
+    ) -> Result<()> {
         let info = self.registry.get_module(name, None)?;
 
+        let config_map: HashMap<String, String> = config
+            .map(|c| {
+                c.iter()
+                    .map(|(k, v)| {
+                        let s = match v {
+                            serde_json::Value::String(s) => s.clone(),
+                            _ => v.to_string(),
+                        };
+                        (k.clone(), s)
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+
         if let Some(ref manager) = self.module_manager {
-            // Convert ModuleInfo to ModuleMetadata
             let metadata: RefModuleMetadata = info.clone().into();
 
             let binary_path = info.binary_path.as_ref().ok_or_else(|| {
                 CompositionError::ModuleNotFound(format!("Module {} has no binary path", name))
             })?;
 
-            // Load module via ModuleManager
             let mut mgr = manager.lock().await;
-            mgr.load_module(
-                &info.name,
-                binary_path,
-                metadata,
-                HashMap::new(), // TODO: Get config from ModuleSpec
-            )
-            .await
-            .map_err(|e| CompositionError::from(e))?;
+            mgr.load_module(&info.name, binary_path, metadata, config_map)
+                .await
+                .map_err(CompositionError::from)?;
 
             self.status_cache
                 .insert(name.to_string(), ModuleStatus::Running);
         } else {
-            // Fallback: just cache status
             self.status_cache
                 .insert(name.to_string(), ModuleStatus::Running);
         }
@@ -88,17 +107,26 @@ impl ModuleLifecycle {
     }
 
     /// Restart a module
-    pub async fn restart_module(&mut self, name: &str) -> Result<()> {
+    pub async fn restart_module(
+        &mut self,
+        name: &str,
+        config: Option<&HashMap<String, serde_json::Value>>,
+    ) -> Result<()> {
         self.stop_module(name).await?;
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-        self.start_module(name).await
+        self.start_module(name, config).await
     }
 
-    /// Get module status
+    /// Get module status (queries ModuleManager when available, else cache)
     pub async fn get_module_status(&self, name: &str) -> Result<ModuleStatus> {
-        let _module = self.registry.get_module(name, None)?;
+        let _ = self.registry.get_module(name, None)?;
 
-        // TODO: Query actual ModuleManager state if available
+        if let Some(ref manager) = self.module_manager {
+            if let Some(state) = manager.lock().await.get_module_state(name).await {
+                return Ok(module_state_to_status(state));
+            }
+        }
+
         Ok(self
             .status_cache
             .get(name)
