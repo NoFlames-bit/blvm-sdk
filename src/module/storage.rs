@@ -5,6 +5,7 @@
 //! WASM modules will use host-provided implementations.
 
 use anyhow::Result;
+use std::any::Any;
 use std::sync::Arc;
 
 /// Key-value tree interface for module storage.
@@ -178,6 +179,10 @@ impl ModuleStorageDatabaseBridge {
 }
 
 impl blvm_node::storage::database::Database for ModuleStorageDatabaseBridge {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
     fn open_tree(&self, name: &str) -> Result<Box<dyn blvm_node::storage::database::Tree>> {
         let tree = self.storage.open_tree(name)?;
         Ok(Box::new(ModuleTreeAdapter(tree)))

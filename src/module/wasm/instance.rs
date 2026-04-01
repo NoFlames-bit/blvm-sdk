@@ -79,7 +79,7 @@ impl WasmModuleInstance {
             .get_memory(&mut *store, "memory")
             .ok_or_else(|| wasmtime::Error::msg("Module has no 'memory' export"))?;
 
-        let data = memory.data(&store);
+        let data = memory.data(&mut *store);
         let end = (ptr + len) as usize;
         if end > data.len() {
             return Err(wasmtime::Error::msg(format!(
@@ -147,7 +147,7 @@ impl WasmModuleInstance {
             return Ok(String::new());
         }
 
-        let data = memory.data(&store);
+        let data = memory.data(&mut *store);
         let end = (ptr + len) as usize;
         if end > data.len() {
             return Err(wasmtime::Error::msg(format!(

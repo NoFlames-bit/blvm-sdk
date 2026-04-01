@@ -56,7 +56,7 @@ default = ["node"]
 registry = ["dep:reqwest"]
 git = ["dep:git2"]
 node = ["dep:blvm-node"]
-wasm-modules = ["dep:wasmtime", "node"]
+wasm-modules = ["dep:wasmtime", "node", "blvm-node/wasm-modules"]
 
 # Local development: Use [patch.crates-io] to override with local paths
 # For production/CI, these patches are removed and crates.io versions are used
