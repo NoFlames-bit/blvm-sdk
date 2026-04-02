@@ -10,8 +10,8 @@
 use blvm_sdk::module::prelude::*;
 use blvm_sdk::module::{MigrationContext, ModuleBootstrap, ModuleDb};
 use blvm_sdk::run_module;
-use serde_json::Value;
 use clap::Parser;
+use serde_json::Value;
 use std::path::PathBuf;
 use tracing::info;
 
@@ -40,7 +40,10 @@ impl HelloModule {
     /// Greet someone by name.
     #[command]
     fn greet(&self, _ctx: &InvocationContext, name: Option<String>) -> Result<String, ModuleError> {
-        Ok(format!("Hello, {}!\n", name.unwrap_or_else(|| "world".into())))
+        Ok(format!(
+            "Hello, {}!\n",
+            name.unwrap_or_else(|| "world".into())
+        ))
     }
 
     #[rpc_method(name = "hello_greet")]
@@ -78,9 +81,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Err(_) => {
             let args = Args::parse();
             ModuleBootstrap {
-                module_id: args.module_id.unwrap_or_else(|| "hello_standalone".to_string()),
-                socket_path: args.socket_path.unwrap_or_else(|| PathBuf::from("data/modules/hello.sock")),
-                data_dir: args.data_dir.unwrap_or_else(|| PathBuf::from("data/modules/hello")),
+                module_id: args
+                    .module_id
+                    .unwrap_or_else(|| "hello_standalone".to_string()),
+                socket_path: args
+                    .socket_path
+                    .unwrap_or_else(|| PathBuf::from("data/modules/hello.sock")),
+                data_dir: args
+                    .data_dir
+                    .unwrap_or_else(|| PathBuf::from("data/modules/hello")),
             }
         }
     };
@@ -99,8 +108,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         module: module,
         module_type: HelloModule,
         db: db.as_db(),
-    }
-    ?;
+    }?;
 
     Ok(())
 }

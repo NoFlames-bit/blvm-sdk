@@ -111,7 +111,8 @@ pub fn expand_module_impl(
         item.items.push(cli_spec_fn);
 
         if let Some(dispatch_code) = generate_dispatch_cli(&cli_filtered) {
-            let dispatch_item: ImplItem = syn::parse2(dispatch_code).expect("dispatch_cli should parse");
+            let dispatch_item: ImplItem =
+                syn::parse2(dispatch_code).expect("dispatch_cli should parse");
             item.items.push(dispatch_item);
         }
     } else {
@@ -145,10 +146,12 @@ pub fn expand_module_impl(
     }
 
     // 2. RPC: from #[rpc_method] methods
-    item = syn::parse2(rpc_methods::expand_rpc_methods(item.clone())).expect("rpc expansion should parse");
+    item = syn::parse2(rpc_methods::expand_rpc_methods(item.clone()))
+        .expect("rpc expansion should parse");
 
     // 3. Events: from #[on_event] methods
-    let mut event_to_methods: HashMap<String, Vec<(syn::Ident, Vec<(String, bool)>, Vec<String>)>> = HashMap::new();
+    let mut event_to_methods: HashMap<String, Vec<(syn::Ident, Vec<(String, bool)>, Vec<String>)>> =
+        HashMap::new();
     let mut all_event_idents = Vec::new();
 
     for impl_item in &item.items {
@@ -158,16 +161,21 @@ pub fn expand_module_impl(
                     let event_idents = parse_on_event_args(attr);
                     let method_ident = method.sig.ident.clone();
                     let params = parse_handler_params(method);
-                    let event_keys: Vec<String> = event_idents.iter().map(|e| e.to_string()).collect();
+                    let event_keys: Vec<String> =
+                        event_idents.iter().map(|e| e.to_string()).collect();
                     for ev in &event_idents {
                         let key = ev.to_string();
-                        if !all_event_idents.iter().any(|e: &syn::Ident| e.to_string() == key) {
+                        if !all_event_idents
+                            .iter()
+                            .any(|e: &syn::Ident| e.to_string() == key)
+                        {
                             all_event_idents.push(ev.clone());
                         }
-                        event_to_methods
-                            .entry(key)
-                            .or_default()
-                            .push((method_ident.clone(), params.clone(), event_keys.clone()));
+                        event_to_methods.entry(key).or_default().push((
+                            method_ident.clone(),
+                            params.clone(),
+                            event_keys.clone(),
+                        ));
                     }
                     break;
                 }
@@ -326,7 +334,9 @@ fn build_handler_call(
         });
 
     if !use_di {
-        let has_ctx = params.iter().any(|(name, _)| name == "ctx" || name == "context");
+        let has_ctx = params
+            .iter()
+            .any(|(name, _)| name == "ctx" || name == "context");
         return if has_ctx {
             quote! { self.#method_ident(&event, ctx).await?; }
         } else {

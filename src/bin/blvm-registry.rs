@@ -65,16 +65,25 @@ struct RegistryModule {
     optional_dependencies: std::collections::HashMap<String, String>,
 }
 
-fn run_index(dir: PathBuf, output: Option<PathBuf>, registry_url: Option<String>) -> Result<(), Box<dyn std::error::Error>> {
+fn run_index(
+    dir: PathBuf,
+    output: Option<PathBuf>,
+    registry_url: Option<String>,
+) -> Result<(), Box<dyn std::error::Error>> {
     let discovery = ModuleDiscovery::new(&dir);
-    let discovered = discovery.discover_modules().map_err(|e: ModuleError| e.to_string())?;
+    let discovered = discovery
+        .discover_modules()
+        .map_err(|e: ModuleError| e.to_string())?;
 
     let modules: Vec<RegistryModule> = discovered
         .iter()
         .map(|d| {
             let download_url = registry_url.as_ref().map(|base| {
                 let base = base.trim_end_matches('/');
-                format!("{}/modules/{}-{}.tar.gz", base, d.manifest.name, d.manifest.version)
+                format!(
+                    "{}/modules/{}-{}.tar.gz",
+                    base, d.manifest.name, d.manifest.version
+                )
             });
             RegistryModule {
                 name: d.manifest.name.clone(),
@@ -100,7 +109,11 @@ fn run_index(dir: PathBuf, output: Option<PathBuf>, registry_url: Option<String>
 
     if let Some(path) = output {
         std::fs::write(&path, json)?;
-        println!("Wrote {} modules to {}", index.modules.len(), path.display());
+        println!(
+            "Wrote {} modules to {}",
+            index.modules.len(),
+            path.display()
+        );
     } else {
         println!("{}", json);
     }
@@ -112,7 +125,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
 
     match cli.command {
-        Some(Commands::Index { dir, output, registry_url }) => run_index(dir, output, registry_url),
+        Some(Commands::Index {
+            dir,
+            output,
+            registry_url,
+        }) => run_index(dir, output, registry_url),
         None => {
             println!("Run with --help for usage");
             Ok(())

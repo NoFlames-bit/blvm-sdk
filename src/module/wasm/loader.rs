@@ -62,11 +62,9 @@ impl WasmModuleLoader for BlvmSdkWasmLoader {
     ) -> Result<Arc<dyn blvm_node::module::wasm::WasmModuleInstance>, String> {
         let db_path = data_dir.join("db");
         std::fs::create_dir_all(&db_path).map_err(|e| e.to_string())?;
-        let db = create_database(&db_path, DatabaseBackend::Redb, None)
-            .map_err(|e| e.to_string())?;
-        let storage = Arc::new(StorageAdapter {
-            db: Arc::from(db),
-        });
+        let db =
+            create_database(&db_path, DatabaseBackend::Redb, None).map_err(|e| e.to_string())?;
+        let storage = Arc::new(StorageAdapter { db: Arc::from(db) });
         let instance = WasmModuleInstance::load_from_path_with_context(path, storage, config)
             .map_err(|e| e.to_string())?;
         Ok(Arc::new(instance))

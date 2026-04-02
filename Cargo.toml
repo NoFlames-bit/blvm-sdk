@@ -58,8 +58,7 @@ git = ["dep:git2"]
 node = ["dep:blvm-node"]
 wasm-modules = ["dep:wasmtime", "node", "blvm-node/wasm-modules"]
 
-# Local development: Use [patch.crates-io] to override with local paths
-# For production/CI, these patches are removed and crates.io versions are used
+# Local monorepo: optional [patch.crates-io] for sibling paths — see README.
 [patch.crates-io]
 blvm-protocol = { path = "../blvm-protocol" }
 blvm-consensus = { path = "../blvm-consensus" }

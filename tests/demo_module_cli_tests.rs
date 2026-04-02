@@ -3,9 +3,9 @@
 //! Verifies that #[command] methods with ctx: &InvocationContext produce correct
 //! cli_spec subcommands and dispatch_cli routing.
 
+use blvm_sdk::migrations;
 use blvm_sdk::module::prelude::*;
 use blvm_sdk::module::{open_module_db, run_migrations, MigrationContext};
-use blvm_sdk::migrations;
 use tempfile::TempDir;
 
 #[migration(version = 1)]
@@ -28,8 +28,16 @@ pub struct TestCliModule {
 #[module(name = "test-cli")]
 impl TestCliModule {
     #[command]
-    fn set(&self, ctx: &InvocationContext, key: String, value: String) -> Result<String, ModuleError> {
-        let tree = ctx.db().open_tree("items").map_err(|e| ModuleError::Other(e.to_string()))?;
+    fn set(
+        &self,
+        ctx: &InvocationContext,
+        key: String,
+        value: String,
+    ) -> Result<String, ModuleError> {
+        let tree = ctx
+            .db()
+            .open_tree("items")
+            .map_err(|e| ModuleError::Other(e.to_string()))?;
         tree.insert(key.as_bytes(), value.as_bytes())
             .map_err(|e| ModuleError::Other(e.to_string()))?;
         Ok(format!("Set {}={}\n", key, value))
@@ -37,7 +45,10 @@ impl TestCliModule {
 
     #[command]
     fn get(&self, ctx: &InvocationContext, key: String) -> Result<String, ModuleError> {
-        let tree = ctx.db().open_tree("items").map_err(|e| ModuleError::Other(e.to_string()))?;
+        let tree = ctx
+            .db()
+            .open_tree("items")
+            .map_err(|e| ModuleError::Other(e.to_string()))?;
         let value = tree
             .get(key.as_bytes())
             .map_err(|e| ModuleError::Other(e.to_string()))?
@@ -48,11 +59,20 @@ impl TestCliModule {
 
     #[command]
     fn list(&self, ctx: &InvocationContext) -> Result<String, ModuleError> {
-        let tree = ctx.db().open_tree("items").map_err(|e| ModuleError::Other(e.to_string()))?;
+        let tree = ctx
+            .db()
+            .open_tree("items")
+            .map_err(|e| ModuleError::Other(e.to_string()))?;
         let items: Vec<String> = tree
             .iter()
             .filter_map(|r| r.ok())
-            .map(|(k, v)| format!("{}={}", String::from_utf8_lossy(&k), String::from_utf8_lossy(&v)))
+            .map(|(k, v)| {
+                format!(
+                    "{}={}",
+                    String::from_utf8_lossy(&k),
+                    String::from_utf8_lossy(&v)
+                )
+            })
             .collect();
         Ok(if items.is_empty() {
             "(empty)\n".into()
@@ -63,7 +83,10 @@ impl TestCliModule {
 
     #[command]
     fn delete(&self, ctx: &InvocationContext, key: String) -> Result<String, ModuleError> {
-        let tree = ctx.db().open_tree("items").map_err(|e| ModuleError::Other(e.to_string()))?;
+        let tree = ctx
+            .db()
+            .open_tree("items")
+            .map_err(|e| ModuleError::Other(e.to_string()))?;
         tree.remove(key.as_bytes())
             .map_err(|e| ModuleError::Other(e.to_string()))?;
         Ok(format!("Deleted {}\n", key))
@@ -96,7 +119,12 @@ fn test_cli_spec_has_subcommands() {
         "cli_spec should include 'delete' subcommand, got: {:?}",
         sub_names
     );
-    assert_eq!(sub_names.len(), 4, "expected 4 subcommands, got: {:?}", sub_names);
+    assert_eq!(
+        sub_names.len(),
+        4,
+        "expected 4 subcommands, got: {:?}",
+        sub_names
+    );
 }
 
 #[test]
@@ -111,11 +139,19 @@ fn test_dispatch_cli_set_get_list_delete() {
     let ctx = InvocationContext::new(db);
 
     // set key=value
-    let out = module.dispatch_cli(&ctx, "set", &["--key".into(), "foo".into(), "--value".into(), "bar".into()]).unwrap();
+    let out = module
+        .dispatch_cli(
+            &ctx,
+            "set",
+            &["--key".into(), "foo".into(), "--value".into(), "bar".into()],
+        )
+        .unwrap();
     assert!(out.contains("Set foo=bar"), "set output: {}", out);
 
     // get key
-    let out = module.dispatch_cli(&ctx, "get", &["--key".into(), "foo".into()]).unwrap();
+    let out = module
+        .dispatch_cli(&ctx, "get", &["--key".into(), "foo".into()])
+        .unwrap();
     assert!(out.contains("foo=bar"), "get output: {}", out);
 
     // list
@@ -123,11 +159,15 @@ fn test_dispatch_cli_set_get_list_delete() {
     assert!(out.contains("foo=bar"), "list output: {}", out);
 
     // delete
-    let out = module.dispatch_cli(&ctx, "delete", &["--key".into(), "foo".into()]).unwrap();
+    let out = module
+        .dispatch_cli(&ctx, "delete", &["--key".into(), "foo".into()])
+        .unwrap();
     assert!(out.contains("Deleted foo"), "delete output: {}", out);
 
     // get after delete
-    let out = module.dispatch_cli(&ctx, "get", &["--key".into(), "foo".into()]).unwrap();
+    let out = module
+        .dispatch_cli(&ctx, "get", &["--key".into(), "foo".into()])
+        .unwrap();
     assert!(out.contains("<not found>"), "get after delete: {}", out);
 
     // unknown subcommand
@@ -147,7 +187,9 @@ fn test_dispatch_cli_positional_args() {
     let ctx = InvocationContext::new(db);
 
     // positional: key value
-    let out = module.dispatch_cli(&ctx, "set", &["x".into(), "y".into()]).unwrap();
+    let out = module
+        .dispatch_cli(&ctx, "set", &["x".into(), "y".into()])
+        .unwrap();
     assert!(out.contains("Set x=y"), "positional set: {}", out);
 
     let out = module.dispatch_cli(&ctx, "get", &["x".into()]).unwrap();

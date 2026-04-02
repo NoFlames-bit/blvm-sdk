@@ -110,7 +110,13 @@ pub type Migration = (u32, MigrationUp, Option<MigrationDown>);
 /// run_migrations(&db, &[(1, up_initial, Some(down_initial)), (2, up_add_cache, None)])?;
 /// ```
 pub fn run_migrations(db: &Arc<dyn Database>, migrations: &[(u32, MigrationUp)]) -> Result<()> {
-    run_migrations_with_down(db, &migrations.iter().map(|(v, u)| (*v, *u, None)).collect::<Vec<_>>())
+    run_migrations_with_down(
+        db,
+        &migrations
+            .iter()
+            .map(|(v, u)| (*v, *u, None))
+            .collect::<Vec<_>>(),
+    )
 }
 
 /// Run pending up migrations. Supports optional down migrations for rollback.

@@ -9,10 +9,8 @@ use proc_macro::TokenStream;
 use quote::{quote, ToTokens};
 use std::collections::HashMap;
 use syn::{
-    parse_macro_input,
-    punctuated::Punctuated,
-    token::Comma,
-    DeriveInput, Field, ImplItem, Item, ItemImpl, LitStr, Meta,
+    parse_macro_input, punctuated::Punctuated, token::Comma, DeriveInput, Field, ImplItem, Item,
+    ItemImpl, LitStr, Meta,
 };
 
 /// Attribute macro: `#[command(name = "...")]` or `#[module_cli(name = "...")]` - on struct: marks CLI entry point.
@@ -118,7 +116,8 @@ fn expand_cli_subcommand(attr: TokenStream, mut item: ItemImpl) -> TokenStream {
     item.items.push(fn_item);
 
     if let Some(dispatch_code) = cli_spec::generate_dispatch_cli(&item) {
-        let dispatch_item: ImplItem = syn::parse2(dispatch_code).expect("dispatch_cli should parse");
+        let dispatch_item: ImplItem =
+            syn::parse2(dispatch_code).expect("dispatch_cli should parse");
         item.items.push(dispatch_item);
     }
 
@@ -315,11 +314,9 @@ fn extract_config_env_from_field(field: &Field) -> Option<Option<String>> {
                         None
                     }
                 }
-                Meta::List(list) => {
-                    syn::parse2::<LitStr>(list.tokens.clone())
-                        .ok()
-                        .map(|s| s.value())
-                }
+                Meta::List(list) => syn::parse2::<LitStr>(list.tokens.clone())
+                    .ok()
+                    .map(|s| s.value()),
                 _ => None,
             });
         }
@@ -328,7 +325,11 @@ fn extract_config_env_from_field(field: &Field) -> Option<Option<String>> {
 }
 
 /// Generate env override assignment for a field based on its type.
-fn env_override_stmt(field_name: &syn::Ident, env_lit: &LitStr, ty: &syn::Type) -> proc_macro2::TokenStream {
+fn env_override_stmt(
+    field_name: &syn::Ident,
+    env_lit: &LitStr,
+    ty: &syn::Type,
+) -> proc_macro2::TokenStream {
     let ty_str = ty.to_token_stream().to_string();
     let ty_compact = ty_str.replace(' ', "");
     let set_stmt = if ty_compact == "String" {
@@ -501,8 +502,8 @@ pub fn blvm_module(attr: TokenStream, item: TokenStream) -> TokenStream {
             let config_ty = extract_config_type_from_meta(&args)
                 .or_else(|| extract_config_type_from_struct(struct_item));
             let migrations = extract_migrations_from_meta(&args);
-            let module_name = extract_name_from_meta(&args)
-                .unwrap_or_else(|| derive_module_name(struct_name));
+            let module_name =
+                extract_name_from_meta(&args).unwrap_or_else(|| derive_module_name(struct_name));
 
             let mut blocks = Vec::new();
             let ct = config_ty.as_ref();
@@ -573,10 +574,8 @@ pub fn event_handlers(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let mut impl_block = parse_macro_input!(item as ItemImpl);
 
     // Collect (event_type_ident, (method_ident, params, event_types_for_method)) from each #[on_event] method
-    let mut event_to_methods: HashMap<
-        String,
-        Vec<(syn::Ident, Vec<(String, bool)>, Vec<String>)>,
-    > = HashMap::new();
+    let mut event_to_methods: HashMap<String, Vec<(syn::Ident, Vec<(String, bool)>, Vec<String>)>> =
+        HashMap::new();
     let mut all_event_idents = Vec::<syn::Ident>::new();
 
     for impl_item in &impl_block.items {
@@ -586,16 +585,18 @@ pub fn event_handlers(_attr: TokenStream, item: TokenStream) -> TokenStream {
                     let event_idents = parse_on_event_args(attr);
                     let method_ident = method.sig.ident.clone();
                     let params = parse_handler_params(method);
-                    let event_keys: Vec<String> = event_idents.iter().map(|e| e.to_string()).collect();
+                    let event_keys: Vec<String> =
+                        event_idents.iter().map(|e| e.to_string()).collect();
                     for ev in &event_idents {
                         let key = ev.to_string();
                         if !all_event_idents.iter().any(|e| e.to_string() == key) {
                             all_event_idents.push(ev.clone());
                         }
-                        event_to_methods
-                            .entry(key)
-                            .or_default()
-                            .push((method_ident.clone(), params.clone(), event_keys.clone()));
+                        event_to_methods.entry(key).or_default().push((
+                            method_ident.clone(),
+                            params.clone(),
+                            event_keys.clone(),
+                        ));
                     }
                     break;
                 }

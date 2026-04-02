@@ -7,9 +7,7 @@
 //!
 //! Example: m/44'/0'/0'/0/0 (Bitcoin mainnet first address)
 
-use crate::governance::bip32::{
-    derive_master_key, ExtendedPrivateKey, ExtendedPublicKey,
-};
+use crate::governance::bip32::{derive_master_key, ExtendedPrivateKey, ExtendedPublicKey};
 use crate::governance::error::{GovernanceError, GovernanceResult};
 
 /// BIP44 purpose (always 44 for multi-account hierarchy)

@@ -122,6 +122,17 @@ blvm-verify release \
 
 See [SECURITY.md](SECURITY.md) for security policies and [BTCDecoded Security Policy](https://github.com/BTCDecoded/.github/blob/main/SECURITY.md) for organization-wide guidelines.
 
+## crates.io
+
+The published crate is [`blvm-sdk` on crates.io](https://crates.io/crates/blvm-sdk). In the monorepo, `Cargo.toml` uses a **path** to `blvm-node` and `blvm-sdk-macros`. For published versions only:
+
+```toml
+[dependencies]
+blvm-sdk = "0.1.0"
+```
+
+Use `[patch.crates-io]` in `.cargo/config.toml` if you need to override with local sibling paths.
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) and the [BTCDecoded Contribution Guide](https://github.com/BTCDecoded/.github/blob/main/CONTRIBUTING.md).

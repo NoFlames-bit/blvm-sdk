@@ -42,7 +42,8 @@ impl WasmModuleInstance {
         let engine = Engine::default();
         let host_ctx = WasmHostContext::new(storage, config);
         let mut store = Store::new(&engine, host_ctx);
-        let linker = create_host_imports(&engine).map_err(|e| wasmtime::Error::msg(e.to_string()))?;
+        let linker =
+            create_host_imports(&engine).map_err(|e| wasmtime::Error::msg(e.to_string()))?;
         let module = Module::new(&engine, wasm_bytes)?;
         let instance = linker.instantiate(&mut store, &module)?;
 
@@ -58,7 +59,10 @@ impl WasmModuleInstance {
     }
 
     fn call_string_export(&self, name: &str) -> Result<String, wasmtime::Error> {
-        let mut store = self.store.lock().map_err(|e| wasmtime::Error::msg(e.to_string()))?;
+        let mut store = self
+            .store
+            .lock()
+            .map_err(|e| wasmtime::Error::msg(e.to_string()))?;
         let func = self
             .instance
             .get_func(&mut *store, name)
@@ -109,7 +113,10 @@ impl WasmModuleInstance {
         arg1: &str,
         arg2: &[u8],
     ) -> Result<String, wasmtime::Error> {
-        let mut store = self.store.lock().map_err(|e| wasmtime::Error::msg(e.to_string()))?;
+        let mut store = self
+            .store
+            .lock()
+            .map_err(|e| wasmtime::Error::msg(e.to_string()))?;
         let func = self
             .instance
             .get_func(&mut *store, export_name)
@@ -247,11 +254,22 @@ impl blvm_node::module::wasm::WasmModuleInstance for WasmModuleInstance {
                                         let o = arg.as_object()?;
                                         Some(blvm_node::module::ipc::protocol::CliArgSpec {
                                             name: o.get("name")?.as_str()?.to_string(),
-                                            long_name: o.get("long_name").and_then(|v| v.as_str()).map(String::from),
-                                            short_name: o.get("short_name").and_then(|v| v.as_str()).map(String::from),
+                                            long_name: o
+                                                .get("long_name")
+                                                .and_then(|v| v.as_str())
+                                                .map(String::from),
+                                            short_name: o
+                                                .get("short_name")
+                                                .and_then(|v| v.as_str())
+                                                .map(String::from),
                                             required: o.get("required").and_then(|v| v.as_bool()),
-                                            takes_value: o.get("takes_value").and_then(|v| v.as_bool()),
-                                            default: o.get("default").and_then(|v| v.as_str()).map(String::from),
+                                            takes_value: o
+                                                .get("takes_value")
+                                                .and_then(|v| v.as_bool()),
+                                            default: o
+                                                .get("default")
+                                                .and_then(|v| v.as_str())
+                                                .map(String::from),
                                         })
                                     })
                                     .collect()

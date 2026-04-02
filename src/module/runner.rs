@@ -5,8 +5,7 @@
 
 use blvm_node::module::integration::ModuleIntegration;
 use blvm_node::module::ipc::protocol::{
-    CliSpec, InvocationMessage, InvocationResultMessage,
-    ModuleMessage,
+    CliSpec, InvocationMessage, InvocationResultMessage, ModuleMessage,
 };
 use blvm_node::module::traits::{ModuleError, NodeAPI};
 use blvm_node::storage::database::Database;
@@ -112,7 +111,9 @@ where
 
             let node_api = integration.node_api();
             for method in rpc_methods {
-                node_api.register_rpc_endpoint((*method).to_string(), String::new()).await?;
+                node_api
+                    .register_rpc_endpoint((*method).to_string(), String::new())
+                    .await?;
             }
 
             integration.subscribe_events(event_types).await?;
@@ -195,7 +196,9 @@ where
 
             let node_api = integration.node_api();
             for method in rpc_methods {
-                node_api.register_rpc_endpoint((*method).to_string(), String::new()).await?;
+                node_api
+                    .register_rpc_endpoint((*method).to_string(), String::new())
+                    .await?;
             }
 
             integration.subscribe_events(event_types).await?;
@@ -282,7 +285,9 @@ where
 
             let node_api = integration.node_api();
             for method in rpc_methods {
-                node_api.register_rpc_endpoint((*method).to_string(), String::new()).await?;
+                node_api
+                    .register_rpc_endpoint((*method).to_string(), String::new())
+                    .await?;
             }
 
             integration.subscribe_events(event_types).await?;

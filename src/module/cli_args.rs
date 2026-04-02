@@ -19,7 +19,16 @@ pub fn parse_args(
     let mut map = HashMap::new();
 
     // Check if we have any -- or - prefixed args (named style)
-    let has_named = args.iter().any(|a| a.starts_with("--") || (a.starts_with('-') && a.len() > 1 && !a.chars().nth(1).map(|c| c.is_ascii_digit()).unwrap_or(false)));
+    let has_named = args.iter().any(|a| {
+        a.starts_with("--")
+            || (a.starts_with('-')
+                && a.len() > 1
+                && !a
+                    .chars()
+                    .nth(1)
+                    .map(|c| c.is_ascii_digit())
+                    .unwrap_or(false))
+    });
 
     if has_named {
         // Named parsing: --key value, -k value

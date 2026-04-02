@@ -8,8 +8,8 @@ use blvm_node::module::registry::{
     ModuleDependencies as RefModuleDependencies, ModuleDiscovery as RefModuleDiscovery,
 };
 use blvm_node::module::traits::ModuleError as RefModuleError;
-use std::path::{Path, PathBuf};
 use std::fs;
+use std::path::{Path, PathBuf};
 
 const SOURCE_FILE: &str = ".blvm-source.json";
 
@@ -135,7 +135,9 @@ impl ModuleRegistry {
 
                 Ok(ModuleInfo::from(&discovered[0]))
             }
-            ModuleSource::Registry { url, name } => self.install_from_registry(&url, name.as_deref()),
+            ModuleSource::Registry { url, name } => {
+                self.install_from_registry(&url, name.as_deref())
+            }
             ModuleSource::Git { url, tag } => self.install_from_git(&url, tag.as_deref()),
         }
     }
@@ -191,42 +193,67 @@ impl ModuleRegistry {
         }
 
         Err(CompositionError::InstallationFailed(
-            "Module has no install source (.blvm-source.json). Reinstall from registry or git.".to_string(),
+            "Module has no install source (.blvm-source.json). Reinstall from registry or git."
+                .to_string(),
         ))
     }
 
     #[cfg(feature = "registry")]
     fn install_from_registry(&mut self, url: &str, name: Option<&str>) -> Result<ModuleInfo> {
         let index: serde_json::Value = reqwest::blocking::get(url)
-            .map_err(|e| CompositionError::InstallationFailed(format!("Registry fetch failed: {}", e)))?
+            .map_err(|e| {
+                CompositionError::InstallationFailed(format!("Registry fetch failed: {}", e))
+            })?
             .json()
-            .map_err(|e| CompositionError::InstallationFailed(format!("Registry JSON parse failed: {}", e)))?;
+            .map_err(|e| {
+                CompositionError::InstallationFailed(format!("Registry JSON parse failed: {}", e))
+            })?;
 
-        let modules = index.get("modules").and_then(|m| m.as_array())
-            .ok_or_else(|| CompositionError::InstallationFailed("Registry missing 'modules' array".to_string()))?;
+        let modules = index
+            .get("modules")
+            .and_then(|m| m.as_array())
+            .ok_or_else(|| {
+                CompositionError::InstallationFailed("Registry missing 'modules' array".to_string())
+            })?;
 
         if modules.is_empty() {
-            return Err(CompositionError::InstallationFailed("Registry has no modules".to_string()));
+            return Err(CompositionError::InstallationFailed(
+                "Registry has no modules".to_string(),
+            ));
         }
 
         let selected = if let Some(n) = name {
-            modules.iter()
+            modules
+                .iter()
                 .find(|m| m.get("name").and_then(|v| v.as_str()) == Some(n))
-                .ok_or_else(|| CompositionError::InstallationFailed(format!("Module '{}' not found in registry", n)))?
+                .ok_or_else(|| {
+                    CompositionError::InstallationFailed(format!(
+                        "Module '{}' not found in registry",
+                        n
+                    ))
+                })?
         } else {
             &modules[0]
         };
 
         let first = selected;
-        let name = first.get("name").and_then(|n| n.as_str())
-            .ok_or_else(|| CompositionError::InstallationFailed("Module missing 'name'".to_string()))?;
-        let download_url = first.get("download_url").or_else(|| first.get("url")).and_then(|u| u.as_str())
-            .ok_or_else(|| CompositionError::InstallationFailed("Module missing download_url".to_string()))?;
+        let name = first.get("name").and_then(|n| n.as_str()).ok_or_else(|| {
+            CompositionError::InstallationFailed("Module missing 'name'".to_string())
+        })?;
+        let download_url = first
+            .get("download_url")
+            .or_else(|| first.get("url"))
+            .and_then(|u| u.as_str())
+            .ok_or_else(|| {
+                CompositionError::InstallationFailed("Module missing download_url".to_string())
+            })?;
 
         let bytes = reqwest::blocking::get(download_url)
             .map_err(|e| CompositionError::InstallationFailed(format!("Download failed: {}", e)))?
             .bytes()
-            .map_err(|e| CompositionError::InstallationFailed(format!("Download read failed: {}", e)))?;
+            .map_err(|e| {
+                CompositionError::InstallationFailed(format!("Download read failed: {}", e))
+            })?;
 
         let dest_dir = self.modules_dir.join(name);
         fs::create_dir_all(&dest_dir)?;
@@ -235,17 +262,29 @@ impl ModuleRegistry {
 
         // Extract tar.gz using system tar (no extra deps)
         let status = std::process::Command::new("tar")
-            .args(["-xzf", archive_path.to_str().unwrap(), "-C", dest_dir.to_str().unwrap()])
+            .args([
+                "-xzf",
+                archive_path.to_str().unwrap(),
+                "-C",
+                dest_dir.to_str().unwrap(),
+            ])
             .status()
-            .map_err(|e| CompositionError::InstallationFailed(format!("tar extraction failed: {}", e)))?;
+            .map_err(|e| {
+                CompositionError::InstallationFailed(format!("tar extraction failed: {}", e))
+            })?;
         fs::remove_file(&archive_path).ok();
         if !status.success() {
-            return Err(CompositionError::InstallationFailed("tar extraction failed".to_string()));
+            return Err(CompositionError::InstallationFailed(
+                "tar extraction failed".to_string(),
+            ));
         }
 
         self.discover_modules()?;
         let info = self.get_module(name, None)?;
-        let dir = info.directory.as_ref().unwrap_or(&self.modules_dir.join(name));
+        let dir = info
+            .directory
+            .as_ref()
+            .unwrap_or(&self.modules_dir.join(name));
         write_source_file(dir, "registry", url)?;
         Ok(info)
     }
@@ -259,7 +298,11 @@ impl ModuleRegistry {
 
     #[cfg(feature = "git")]
     fn install_from_git(&mut self, url: &str, tag: Option<&str>) -> Result<ModuleInfo> {
-        let repo_name = url.split('/').last().unwrap_or("module").trim_end_matches(".git");
+        let repo_name = url
+            .split('/')
+            .last()
+            .unwrap_or("module")
+            .trim_end_matches(".git");
         let dest_dir = self.modules_dir.join(repo_name);
 
         if dest_dir.exists() {
@@ -270,8 +313,9 @@ impl ModuleRegistry {
         if let Some(t) = tag {
             builder.branch(t);
         }
-        builder.clone(url, &dest_dir)
-            .map_err(|e| CompositionError::InstallationFailed(format!("Git clone failed: {}", e)))?;
+        builder.clone(url, &dest_dir).map_err(|e| {
+            CompositionError::InstallationFailed(format!("Git clone failed: {}", e))
+        })?;
 
         write_source_file_git(&dest_dir, url, tag)?;
         self.discover_modules()?;
@@ -288,24 +332,31 @@ impl ModuleRegistry {
     #[cfg(feature = "git")]
     fn update_module_from_git(&mut self, name: &str, _new_version: Option<&str>) -> Result<()> {
         let current = self.get_module(name, None)?;
-        let dir = current.directory.as_ref()
-            .ok_or_else(|| CompositionError::InstallationFailed("Module has no directory".to_string()))?;
+        let dir = current.directory.as_ref().ok_or_else(|| {
+            CompositionError::InstallationFailed("Module has no directory".to_string())
+        })?;
 
         let repo = git2::Repository::open(dir)
             .map_err(|e| CompositionError::InstallationFailed(format!("Git open failed: {}", e)))?;
-        let mut remote = repo.find_remote("origin")
-            .map_err(|e| CompositionError::InstallationFailed(format!("Git remote origin not found: {}", e)))?;
-        remote.fetch(&[], None, None)
-            .map_err(|e| CompositionError::InstallationFailed(format!("Git fetch failed: {}", e)))?;
+        let mut remote = repo.find_remote("origin").map_err(|e| {
+            CompositionError::InstallationFailed(format!("Git remote origin not found: {}", e))
+        })?;
+        remote.fetch(&[], None, None).map_err(|e| {
+            CompositionError::InstallationFailed(format!("Git fetch failed: {}", e))
+        })?;
 
-        let fetch_head = repo.find_reference("FETCH_HEAD")
-            .map_err(|e| CompositionError::InstallationFailed(format!("FETCH_HEAD failed: {}", e)))?;
-        let oid = fetch_head.target()
-            .ok_or_else(|| CompositionError::InstallationFailed("Invalid FETCH_HEAD".to_string()))?;
-        let obj = repo.find_object(oid, None)
-            .map_err(|e| CompositionError::InstallationFailed(format!("Find object failed: {}", e)))?;
-        repo.checkout_tree(&obj, None)
-            .map_err(|e| CompositionError::InstallationFailed(format!("Checkout tree failed: {}", e)))?;
+        let fetch_head = repo.find_reference("FETCH_HEAD").map_err(|e| {
+            CompositionError::InstallationFailed(format!("FETCH_HEAD failed: {}", e))
+        })?;
+        let oid = fetch_head.target().ok_or_else(|| {
+            CompositionError::InstallationFailed("Invalid FETCH_HEAD".to_string())
+        })?;
+        let obj = repo.find_object(oid, None).map_err(|e| {
+            CompositionError::InstallationFailed(format!("Find object failed: {}", e))
+        })?;
+        repo.checkout_tree(&obj, None).map_err(|e| {
+            CompositionError::InstallationFailed(format!("Checkout tree failed: {}", e))
+        })?;
         repo.set_head_detached(oid)
             .map_err(|e| CompositionError::InstallationFailed(format!("Checkout failed: {}", e)))?;
 

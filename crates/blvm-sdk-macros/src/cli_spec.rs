@@ -45,11 +45,15 @@ pub fn generate_spec_code(item: &ItemImpl, cli_name: &str) -> TokenStream {
             if let ImplItem::Fn(method) = impl_item {
                 let method_name = method.sig.ident.to_string();
                 // Skip generated helpers (no self)
-                if method.sig.inputs.is_empty() || method_name == "cli_spec" || method_name == "dispatch_cli" {
+                if method.sig.inputs.is_empty()
+                    || method_name == "cli_spec"
+                    || method_name == "dispatch_cli"
+                {
                     return None;
                 }
                 let sub_name = to_kebab_case(&method_name);
-                let about = extract_doc_comment(method).unwrap_or_else(|| to_title_case(&method_name));
+                let about =
+                    extract_doc_comment(method).unwrap_or_else(|| to_title_case(&method_name));
 
                 let args = method
                     .sig
@@ -139,7 +143,6 @@ pub fn generate_spec_code(item: &ItemImpl, cli_name: &str) -> TokenStream {
     }
 }
 
-
 /// Generate coercion expr for a param: map -> value of type T.
 fn coercion_expr(name: &str, ty: &Type, is_opt: bool) -> TokenStream {
     let name_lit = proc_macro2::Literal::string(name);
@@ -198,10 +201,7 @@ pub fn generate_dispatch_cli(item: &ItemImpl) -> Option<TokenStream> {
         if let ImplItem::Fn(method) = impl_item {
             // Skip associated functions (no self) and generated helpers
             let name = method.sig.ident.to_string();
-            if method.sig.inputs.is_empty()
-                || name == "cli_spec"
-                || name == "dispatch_cli"
-            {
+            if method.sig.inputs.is_empty() || name == "cli_spec" || name == "dispatch_cli" {
                 continue;
             }
             let method_ident = &method.sig.ident;
@@ -214,56 +214,67 @@ pub fn generate_dispatch_cli(item: &ItemImpl) -> Option<TokenStream> {
                 if let FnArg::Typed(pt) = arg {
                     if let Pat::Ident(pi) = &*pt.pat {
                         let name = pi.ident.to_string();
-                        if name == "ctx" || name == "context" || is_invocation_context_type(&pt.ty) {
+                        if name == "ctx" || name == "context" || is_invocation_context_type(&pt.ty)
+                        {
                             has_ctx = true;
                             continue;
                         }
                         let (long_attr, short_attr, default_attr) = extract_arg_attrs(pt);
                         let is_opt = is_option_type(&pt.ty);
                         let inner_ty = inner_type_if_option(&pt.ty);
-                        param_infos.push((name, long_attr, short_attr, default_attr, pt.ty.clone(), inner_ty, is_opt));
+                        param_infos.push((
+                            name,
+                            long_attr,
+                            short_attr,
+                            default_attr,
+                            pt.ty.clone(),
+                            inner_ty,
+                            is_opt,
+                        ));
                     }
                 }
             }
 
             let (arg_specs, arg_exprs): (Vec<_>, Vec<_>) = param_infos
                 .iter()
-                .map(|(name, long_attr, short_attr, default_attr, ty, _inner, is_opt)| {
-                    let long_name = match long_attr {
-                        Some(s) if s.is_empty() => quote! { Some(#name.to_string()) },
-                        Some(s) => {
-                            let lit = proc_macro2::Literal::string(s);
-                            quote! { Some(#lit.to_string()) }
-                        }
-                        None => quote! { Some(#name.to_string()) },
-                    };
-                    let short_name = short_attr
-                        .as_ref()
-                        .map(|s| {
-                            let lit = proc_macro2::Literal::string(s);
-                            quote! { Some(#lit.to_string()) }
-                        })
-                        .unwrap_or(quote! { None });
-                    let default = default_attr
-                        .as_ref()
-                        .map(|s| {
-                            let lit = proc_macro2::Literal::string(s);
-                            quote! { Some(#lit.to_string()) }
-                        })
-                        .unwrap_or(quote! { None });
-                    let spec = quote! {
-                        blvm_node::module::ipc::protocol::CliArgSpec {
-                            name: #name.to_string(),
-                            long_name: #long_name,
-                            short_name: #short_name,
-                            required: Some(!#is_opt),
-                            takes_value: Some(true),
-                            default: #default,
-                        }
-                    };
-                    let expr = coercion_expr(name, ty, *is_opt);
-                    (spec, expr)
-                })
+                .map(
+                    |(name, long_attr, short_attr, default_attr, ty, _inner, is_opt)| {
+                        let long_name = match long_attr {
+                            Some(s) if s.is_empty() => quote! { Some(#name.to_string()) },
+                            Some(s) => {
+                                let lit = proc_macro2::Literal::string(s);
+                                quote! { Some(#lit.to_string()) }
+                            }
+                            None => quote! { Some(#name.to_string()) },
+                        };
+                        let short_name = short_attr
+                            .as_ref()
+                            .map(|s| {
+                                let lit = proc_macro2::Literal::string(s);
+                                quote! { Some(#lit.to_string()) }
+                            })
+                            .unwrap_or(quote! { None });
+                        let default = default_attr
+                            .as_ref()
+                            .map(|s| {
+                                let lit = proc_macro2::Literal::string(s);
+                                quote! { Some(#lit.to_string()) }
+                            })
+                            .unwrap_or(quote! { None });
+                        let spec = quote! {
+                            blvm_node::module::ipc::protocol::CliArgSpec {
+                                name: #name.to_string(),
+                                long_name: #long_name,
+                                short_name: #short_name,
+                                required: Some(!#is_opt),
+                                takes_value: Some(true),
+                                default: #default,
+                            }
+                        };
+                        let expr = coercion_expr(name, ty, *is_opt);
+                        (spec, expr)
+                    },
+                )
                 .unzip();
 
             let args_specs = if arg_specs.is_empty() {
@@ -349,7 +360,8 @@ fn to_kebab_case(s: &str) -> String {
 
 fn to_title_case(s: &str) -> String {
     let kebab = to_kebab_case(s);
-    kebab.split('-')
+    kebab
+        .split('-')
         .map(|w| {
             let mut c = w.chars();
             match c.next() {

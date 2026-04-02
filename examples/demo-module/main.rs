@@ -54,8 +54,16 @@ pub struct DemoModule {
 impl DemoModule {
     /// Set key=value in the items store.
     #[command]
-    fn set(&self, ctx: &InvocationContext, key: String, value: String) -> Result<String, ModuleError> {
-        let tree = ctx.db().open_tree(DATA_TREE).map_err(|e| ModuleError::Other(e.to_string()))?;
+    fn set(
+        &self,
+        ctx: &InvocationContext,
+        key: String,
+        value: String,
+    ) -> Result<String, ModuleError> {
+        let tree = ctx
+            .db()
+            .open_tree(DATA_TREE)
+            .map_err(|e| ModuleError::Other(e.to_string()))?;
         tree.insert(key.as_bytes(), value.as_bytes())
             .map_err(|e| ModuleError::Other(e.to_string()))?;
         Ok(format!("Set {}={}\n", key, value))
@@ -64,7 +72,10 @@ impl DemoModule {
     /// Get value for key from the items store.
     #[command]
     fn get(&self, ctx: &InvocationContext, key: String) -> Result<String, ModuleError> {
-        let tree = ctx.db().open_tree(DATA_TREE).map_err(|e| ModuleError::Other(e.to_string()))?;
+        let tree = ctx
+            .db()
+            .open_tree(DATA_TREE)
+            .map_err(|e| ModuleError::Other(e.to_string()))?;
         let value = tree
             .get(key.as_bytes())
             .map_err(|e| ModuleError::Other(e.to_string()))?
@@ -74,11 +85,20 @@ impl DemoModule {
     }
 
     fn list(&self, ctx: &InvocationContext) -> Result<String, ModuleError> {
-        let tree = ctx.db().open_tree(DATA_TREE).map_err(|e| ModuleError::Other(e.to_string()))?;
+        let tree = ctx
+            .db()
+            .open_tree(DATA_TREE)
+            .map_err(|e| ModuleError::Other(e.to_string()))?;
         let items: Vec<String> = tree
             .iter()
             .filter_map(|r| r.ok())
-            .map(|(k, v)| format!("{}={}", String::from_utf8_lossy(&k), String::from_utf8_lossy(&v)))
+            .map(|(k, v)| {
+                format!(
+                    "{}={}",
+                    String::from_utf8_lossy(&k),
+                    String::from_utf8_lossy(&v)
+                )
+            })
             .collect();
         Ok(if items.is_empty() {
             "(empty)\n".into()
@@ -90,7 +110,10 @@ impl DemoModule {
     /// Delete key from the items store.
     #[command]
     fn delete(&self, ctx: &InvocationContext, key: String) -> Result<String, ModuleError> {
-        let tree = ctx.db().open_tree(DATA_TREE).map_err(|e| ModuleError::Other(e.to_string()))?;
+        let tree = ctx
+            .db()
+            .open_tree(DATA_TREE)
+            .map_err(|e| ModuleError::Other(e.to_string()))?;
         tree.remove(key.as_bytes())
             .map_err(|e| ModuleError::Other(e.to_string()))?;
         Ok(format!("Deleted {}\n", key))
@@ -98,34 +121,51 @@ impl DemoModule {
 
     /// Demo: limit command with i32 and bool args.
     #[command]
-    fn limit(&self, _ctx: &InvocationContext, count: i32, verbose: bool) -> Result<String, ModuleError> {
-        Ok(format!("count={} (i32), verbose={} (bool)\n", count, verbose))
+    fn limit(
+        &self,
+        _ctx: &InvocationContext,
+        count: i32,
+        verbose: bool,
+    ) -> Result<String, ModuleError> {
+        Ok(format!(
+            "count={} (i32), verbose={} (bool)\n",
+            count, verbose
+        ))
     }
 
     // RPC — name defaults to function name (demo_set, demo_get, demo_list)
     #[rpc_method]
-    fn demo_set(&self, params: &Value, db: &Arc<dyn blvm_node::storage::database::Database>) -> Result<Value, ModuleError> {
+    fn demo_set(
+        &self,
+        params: &Value,
+        db: &Arc<dyn blvm_node::storage::database::Database>,
+    ) -> Result<Value, ModuleError> {
         let key = params
             .get("key")
             .and_then(|v| v.as_str())
             .ok_or_else(|| ModuleError::Other("missing key".into()))?;
-        let value = params
-            .get("value")
-            .and_then(|v| v.as_str())
-            .unwrap_or("");
-        let tree = db.open_tree(DATA_TREE).map_err(|e| ModuleError::Other(e.to_string()))?;
+        let value = params.get("value").and_then(|v| v.as_str()).unwrap_or("");
+        let tree = db
+            .open_tree(DATA_TREE)
+            .map_err(|e| ModuleError::Other(e.to_string()))?;
         tree.insert(key.as_bytes(), value.as_bytes())
             .map_err(|e| ModuleError::Other(e.to_string()))?;
         Ok(serde_json::json!({ "ok": true, "key": key }))
     }
 
     #[rpc_method]
-    fn demo_get(&self, params: &Value, db: &Arc<dyn blvm_node::storage::database::Database>) -> Result<Value, ModuleError> {
+    fn demo_get(
+        &self,
+        params: &Value,
+        db: &Arc<dyn blvm_node::storage::database::Database>,
+    ) -> Result<Value, ModuleError> {
         let key = params
             .get("key")
             .and_then(|v| v.as_str())
             .ok_or_else(|| ModuleError::Other("missing key".into()))?;
-        let tree = db.open_tree(DATA_TREE).map_err(|e| ModuleError::Other(e.to_string()))?;
+        let tree = db
+            .open_tree(DATA_TREE)
+            .map_err(|e| ModuleError::Other(e.to_string()))?;
         let value = tree
             .get(key.as_bytes())
             .map_err(|e| ModuleError::Other(e.to_string()))?;
@@ -136,8 +176,14 @@ impl DemoModule {
     }
 
     #[rpc_method]
-    fn demo_list(&self, _params: &Value, db: &Arc<dyn blvm_node::storage::database::Database>) -> Result<Value, ModuleError> {
-        let tree = db.open_tree(DATA_TREE).map_err(|e| ModuleError::Other(e.to_string()))?;
+    fn demo_list(
+        &self,
+        _params: &Value,
+        db: &Arc<dyn blvm_node::storage::database::Database>,
+    ) -> Result<Value, ModuleError> {
+        let tree = db
+            .open_tree(DATA_TREE)
+            .map_err(|e| ModuleError::Other(e.to_string()))?;
         let items: Vec<_> = tree
             .iter()
             .filter_map(|r| r.ok())
@@ -160,7 +206,10 @@ impl DemoModule {
 
     #[on_event(NewBlock)]
     async fn on_new_block(&self, block_hash: &Hash, height: u64) -> Result<(), ModuleError> {
-        info!("Demo module: new block {:?} at height {}", block_hash, height);
+        info!(
+            "Demo module: new block {:?} at height {}",
+            block_hash, height
+        );
         Ok(())
     }
 }

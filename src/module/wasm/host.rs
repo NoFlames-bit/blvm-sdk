@@ -78,10 +78,7 @@ impl WasmHostContext {
         Ok(id)
     }
 
-    fn iter_next(
-        &self,
-        iter_handle: i32,
-    ) -> Result<Option<(Vec<u8>, Vec<u8>)>, String> {
+    fn iter_next(&self, iter_handle: i32) -> Result<Option<(Vec<u8>, Vec<u8>)>, String> {
         let mut iters = self.iters.borrow_mut();
         let (pairs, idx) = iters
             .get_mut(&iter_handle)
@@ -133,7 +130,10 @@ pub fn create_host_imports(engine: &Engine) -> Result<Linker<WasmHostContext>, S
         .func_wrap(
             "env",
             "host_storage_open_tree",
-            |mut caller: wasmtime::Caller<'_, WasmHostContext>, name_ptr: i32, name_len: i32| -> i32 {
+            |mut caller: wasmtime::Caller<'_, WasmHostContext>,
+             name_ptr: i32,
+             name_len: i32|
+             -> i32 {
                 read_str_and_then(&mut caller, name_ptr, name_len, |ctx, name| {
                     ctx.open_tree(name).map_err(|e| e.to_string())
                 })
@@ -200,7 +200,11 @@ pub fn create_host_imports(engine: &Engine) -> Result<Linker<WasmHostContext>, S
         .func_wrap(
             "env",
             "host_storage_remove",
-            |mut caller: wasmtime::Caller<'_, WasmHostContext>, tree_id: i32, k_ptr: i32, k_len: i32| -> i32 {
+            |mut caller: wasmtime::Caller<'_, WasmHostContext>,
+             tree_id: i32,
+             k_ptr: i32,
+             k_len: i32|
+             -> i32 {
                 let ctx = caller.data();
                 let tree = match ctx.get_tree(tree_id) {
                     Ok(t) => t,
@@ -217,10 +221,7 @@ pub fn create_host_imports(engine: &Engine) -> Result<Linker<WasmHostContext>, S
             "env",
             "host_storage_iter_open",
             |caller: wasmtime::Caller<'_, WasmHostContext>, tree_id: i32| -> i32 {
-                caller
-                    .data()
-                    .iter_open(tree_id)
-                    .unwrap_or(-1)
+                caller.data().iter_open(tree_id).unwrap_or(-1)
             },
         )
         .map_err(|e| e.to_string())?;
@@ -323,12 +324,20 @@ where
     f(caller.data(), &s)
 }
 
-fn read_str(caller: &mut wasmtime::Caller<'_, WasmHostContext>, ptr: i32, len: i32) -> Option<String> {
+fn read_str(
+    caller: &mut wasmtime::Caller<'_, WasmHostContext>,
+    ptr: i32,
+    len: i32,
+) -> Option<String> {
     let bytes = read_slice(caller, ptr, len)?;
     String::from_utf8(bytes).ok()
 }
 
-fn read_slice(caller: &mut wasmtime::Caller<'_, WasmHostContext>, ptr: i32, len: i32) -> Option<Vec<u8>> {
+fn read_slice(
+    caller: &mut wasmtime::Caller<'_, WasmHostContext>,
+    ptr: i32,
+    len: i32,
+) -> Option<Vec<u8>> {
     if len <= 0 {
         return Some(vec![]);
     }
@@ -359,6 +368,7 @@ fn write_slice(
         .get_export("memory")
         .and_then(Extern::into_memory)
         .ok_or_else(|| "no memory export".to_string())?;
-    mem.write(caller, ptr_u, &data[..to_write]).map_err(|e| e.to_string())?;
+    mem.write(caller, ptr_u, &data[..to_write])
+        .map_err(|e| e.to_string())?;
     Ok(())
 }

@@ -41,7 +41,9 @@ macro_rules! run_module_main {
         async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let bootstrap = $crate::module::ModuleBootstrap::from_env()?;
             blvm_node::utils::init_module_logging(
-                <$module_type as $crate::module::ModuleMeta>::MODULE_NAME.replace('-', "_").as_str(),
+                <$module_type as $crate::module::ModuleMeta>::MODULE_NAME
+                    .replace('-', "_")
+                    .as_str(),
                 None,
             );
             let db = $crate::module::ModuleDb::open(&bootstrap.data_dir)?;
@@ -69,14 +71,12 @@ macro_rules! run_module_main {
     ) => {
         #[tokio::main]
         async fn main() -> Result<(), Box<dyn std::error::Error>> {
-            blvm_node::utils::init_module_logging(
-                $module_name.replace('-', "_").as_str(),
-                None,
-            );
+            blvm_node::utils::init_module_logging($module_name.replace('-', "_").as_str(), None);
             let bootstrap = $crate::module::ModuleBootstrap::from_env()?;
             let db = $crate::module::ModuleDb::open(&bootstrap.data_dir)?;
             db.run_migrations($migrations)?;
-            let config = <$config_type>::load(bootstrap.data_dir.join("config.toml")).unwrap_or_default();
+            let config =
+                <$config_type>::load(bootstrap.data_dir.join("config.toml")).unwrap_or_default();
             let module = <$module_type>::__module_new(config);
             $crate::run_module! {
                 bootstrap: &bootstrap,
@@ -89,7 +89,6 @@ macro_rules! run_module_main {
         }
     };
 }
-
 
 /// Collect migrations for `run_migrations`. Sugar for `&[(1, up_initial), (2, up_add_cache), ...]`.
 ///
@@ -229,13 +228,18 @@ macro_rules! run_module {
         on_event: $on_event:expr,
         data_dir: $data_dir:expr,
     ) => {{
-        use $crate::module::runner::{run_module_with_setup, InvocationContext};
-        use blvm_node::module::ipc::protocol::{InvocationMessage, InvocationResultMessage, InvocationResultPayload, InvocationType};
+        use blvm_node::module::ipc::protocol::{
+            InvocationMessage, InvocationResultMessage, InvocationResultPayload, InvocationType,
+        };
         use std::sync::Arc;
+        use $crate::module::runner::{run_module_with_setup, InvocationContext};
 
         let db = Arc::clone(&$db);
 
-        let dispatch = |invocation: InvocationMessage, ctx: InvocationContext, module: &$module_type, cli: &$cli_type| {
+        let dispatch = |invocation: InvocationMessage,
+                        ctx: InvocationContext,
+                        module: &$module_type,
+                        cli: &$cli_type| {
             let (success, payload, error) = match &invocation.invocation_type {
                 InvocationType::Cli { subcommand, args } => {
                     let args: Vec<String> = args.clone();
@@ -284,7 +288,8 @@ macro_rules! run_module {
             $setup,
             db,
             $data_dir,
-        ).await
+        )
+        .await
     }};
     (
         socket_path: $socket_path:expr,
@@ -297,15 +302,20 @@ macro_rules! run_module {
         module: $module:expr,
         db: $db:expr,
     ) => {{
-        use $crate::module::runner::{run_module as run_module_fn, InvocationContext};
-        use blvm_node::module::ipc::protocol::{InvocationMessage, InvocationResultMessage, InvocationResultPayload, InvocationType};
+        use blvm_node::module::ipc::protocol::{
+            InvocationMessage, InvocationResultMessage, InvocationResultPayload, InvocationType,
+        };
         use std::sync::Arc;
+        use $crate::module::runner::{run_module as run_module_fn, InvocationContext};
 
         let cli = $cli;
         let module = Arc::new($module);
         let db = Arc::clone(&$db);
 
-        let dispatch = |invocation: InvocationMessage, ctx: InvocationContext, module: &Arc<$module_type>, cli: &$cli_type| {
+        let dispatch = |invocation: InvocationMessage,
+                        ctx: InvocationContext,
+                        module: &Arc<$module_type>,
+                        cli: &$cli_type| {
             let (success, payload, error) = match &invocation.invocation_type {
                 InvocationType::Cli { subcommand, args } => {
                     let args: Vec<String> = args.clone();
@@ -358,7 +368,8 @@ macro_rules! run_module {
             module,
             cli,
             db,
-        ).await
+        )
+        .await
     }};
     (
         bootstrap: $bootstrap:expr,
@@ -398,15 +409,20 @@ macro_rules! run_module {
         on_connect: $on_connect:expr,
         on_tick: $on_tick:expr,
     ) => {{
-        use $crate::module::runner::{run_module_with_tick, InvocationContext};
-        use blvm_node::module::ipc::protocol::{InvocationMessage, InvocationResultMessage, InvocationResultPayload, InvocationType};
+        use blvm_node::module::ipc::protocol::{
+            InvocationMessage, InvocationResultMessage, InvocationResultPayload, InvocationType,
+        };
         use std::sync::Arc;
+        use $crate::module::runner::{run_module_with_tick, InvocationContext};
 
         let cli = $cli;
         let module = Arc::new($module);
         let db = Arc::clone(&$db);
 
-        let dispatch = |invocation: InvocationMessage, ctx: InvocationContext, module: &Arc<$module_type>, cli: &$cli_type| {
+        let dispatch = |invocation: InvocationMessage,
+                        ctx: InvocationContext,
+                        module: &Arc<$module_type>,
+                        cli: &$cli_type| {
             let (success, payload, error) = match &invocation.invocation_type {
                 InvocationType::Cli { subcommand, args } => {
                     let args: Vec<String> = args.clone();
@@ -461,7 +477,8 @@ macro_rules! run_module {
             module,
             cli,
             db,
-        ).await
+        )
+        .await
     }};
 }
 
@@ -504,18 +521,12 @@ pub mod traits;
 
 // Re-export main types for convenience (requires node)
 #[cfg(feature = "node")]
-pub use database::{
-    open_module_db, run_migrations, run_migrations_down, run_migrations_with_down,
-    Migration, MigrationContext, MigrationDown, MigrationUp,
-};
-#[cfg(feature = "node")]
-pub use module_db::ModuleDb;
-#[cfg(feature = "node")]
-pub use storage::{DatabaseStorageAdapter, ModuleStorage, ModuleStorageDatabaseBridge, ModuleTree};
-#[cfg(feature = "node")]
 pub use bootstrap::{ModuleBootstrap, ModuleConfig};
 #[cfg(feature = "node")]
-pub use runner::{run_async, run_module, run_module_with_setup, run_module_with_tick, InvocationContext};
+pub use database::{
+    open_module_db, run_migrations, run_migrations_down, run_migrations_with_down, Migration,
+    MigrationContext, MigrationDown, MigrationUp,
+};
 #[cfg(feature = "node")]
 pub use ipc::client::ModuleIpcClient;
 #[cfg(feature = "node")]
@@ -523,6 +534,14 @@ pub use ipc::protocol::*;
 #[cfg(feature = "node")]
 pub use manifest::ModuleManifest;
 #[cfg(feature = "node")]
+pub use module_db::ModuleDb;
+#[cfg(feature = "node")]
+pub use runner::{
+    run_async, run_module, run_module_with_setup, run_module_with_tick, InvocationContext,
+};
+#[cfg(feature = "node")]
 pub use security::{Permission, PermissionSet};
+#[cfg(feature = "node")]
+pub use storage::{DatabaseStorageAdapter, ModuleStorage, ModuleStorageDatabaseBridge, ModuleTree};
 #[cfg(feature = "node")]
 pub use traits::*;

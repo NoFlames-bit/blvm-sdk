@@ -154,7 +154,10 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
         Some(Commands::Modules(ModuleCommands::Install { source, version: _ })) => {
             let module_source = if source.starts_with("http://") || source.starts_with("https://") {
                 let (url, name) = if let Some(pos) = source.find("#") {
-                    (source[..pos].to_string(), Some(source[pos + 1..].to_string()))
+                    (
+                        source[..pos].to_string(),
+                        Some(source[pos + 1..].to_string()),
+                    )
                 } else {
                     (source.clone(), None)
                 };
@@ -179,7 +182,9 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
 
         Some(Commands::Modules(ModuleCommands::Update { name, version })) => {
             println!("Updating module {} to version {}", name, version);
-            let module = composer.registry_mut().update_module(&name, Some(version.as_str()))?;
+            let module = composer
+                .registry_mut()
+                .update_module(&name, Some(version.as_str()))?;
             println!("Successfully updated: {} ({})", module.name, module.version);
             Ok(())
         }

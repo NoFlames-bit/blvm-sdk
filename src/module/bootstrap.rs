@@ -22,7 +22,9 @@ pub trait ModuleConfig: Default {
 macro_rules! impl_module_config {
     ($config:ty) => {
         impl $crate::module::ModuleConfig for $config {
-            fn load_config(path: impl std::convert::AsRef<std::path::Path>) -> Result<Self, anyhow::Error> {
+            fn load_config(
+                path: impl std::convert::AsRef<std::path::Path>,
+            ) -> Result<Self, anyhow::Error> {
                 <$config>::load(path)
             }
             fn config_map(&self) -> std::collections::HashMap<String, String> {
@@ -85,7 +87,12 @@ impl ModuleBootstrap {
         blvm_node::utils::init_module_logging(module_name.replace('-', "_").as_str(), None);
         let bootstrap = Self::for_module(module_name);
         std::env::set_var("DATA_DIR", bootstrap.data_dir.to_string_lossy().as_ref());
-        tracing::info!("{} starting... (module_id: {}, socket: {:?})", module_name, bootstrap.module_id, bootstrap.socket_path);
+        tracing::info!(
+            "{} starting... (module_id: {}, socket: {:?})",
+            module_name,
+            bootstrap.module_id,
+            bootstrap.socket_path
+        );
         bootstrap
     }
 
