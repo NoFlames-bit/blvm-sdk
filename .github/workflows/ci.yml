@@ -389,8 +389,10 @@ jobs:
         needs.fmt.result == 'success' && needs.docs.result == 'success' && 
         needs.security.result == 'success'))
     permissions:
-      contents: write
+      contents: read
       id-token: write
+    env:
+      CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -436,65 +438,36 @@ jobs:
           PATCH=$((PATCH + 1))
           VERSION="${MAJOR}.${MINOR}.${PATCH}"
           
-          # Check if version already exists and increment until we find a free one
-          CRATE_NAME=$(grep -E '^name = ' Cargo.toml | sed -E 's/^name = "([^"]+)".*/\1/')
+          # Same version tag for blvm-sdk and blvm-sdk-macros; both must be free on crates.io
+          crate_version_exists() {
+            C="$1"
+            V="$2"
+            API_RESPONSE=$(curl -s --max-time 10 "https://crates.io/api/v1/crates/${C}/versions" 2>/dev/null || echo "")
+            if [ -n "$API_RESPONSE" ] && ! echo "$API_RESPONSE" | grep -q '"detail"'; then
+              if command -v jq &> /dev/null; then
+                X=$(echo "$API_RESPONSE" | jq -r ".versions[] | select(.num == \"${V}\") | .num" | head -1)
+                [ "$X" = "$V" ] && return 0
+              elif echo "$API_RESPONSE" | grep -q "\"num\":\"${V}\""; then
+                return 0
+              fi
+            fi
+            SO=$(cargo search "$C" --limit 100 2>/dev/null || echo "")
+            echo "$SO" | grep -qE "\"${C}\".*\"${V}\"" && return 0
+            return 1
+          }
+          
           MAX_ATTEMPTS=10
           ATTEMPT=0
           
           while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
-            echo "Checking if ${CRATE_NAME} v${VERSION} already exists on crates.io..."
-            
-            # Update cargo index first to ensure we have latest data
+            echo "Checking blvm-sdk + blvm-sdk-macros v${VERSION} on crates.io..."
             cargo update --dry-run 2>/dev/null || true
-            
-            VERSION_EXISTS="false"
-            
-            # Method 1: Check using cargo search with updated index (most reliable for cargo's view)
-            CARGO_SEARCH_OUTPUT=$(cargo search "$CRATE_NAME" --limit 100 2>/dev/null || echo "")
-            if echo "$CARGO_SEARCH_OUTPUT" | grep -qE "\"${CRATE_NAME}\".*\"${VERSION}\""; then
-              VERSION_EXISTS="true"
-              echo "Found via cargo search (with updated index)"
-            else
-              # Method 2: Check using crates.io API
-              API_RESPONSE=$(curl -s --max-time 10 "https://crates.io/api/v1/crates/${CRATE_NAME}/versions" 2>/dev/null || echo "")
-              
-              if [ -n "$API_RESPONSE" ] && ! echo "$API_RESPONSE" | grep -q '"detail"'; then
-                # Parse JSON to check if version exists
-                if command -v jq &> /dev/null; then
-                  EXISTS_CHECK=$(echo "$API_RESPONSE" | jq -r ".versions[] | select(.num == \"${VERSION}\") | .num" | head -1)
-                  if [ "$EXISTS_CHECK" = "$VERSION" ]; then
-                    VERSION_EXISTS="true"
-                    echo "Found via crates.io API"
-                  fi
-                else
-                  # Fallback: grep for version in JSON
-                  if echo "$API_RESPONSE" | grep -q "\"num\":\"${VERSION}\""; then
-                    VERSION_EXISTS="true"
-                    echo "Found via crates.io API (grep)"
-                  fi
-                fi
-              fi
-              
-              # Method 3: If still not found, try a temporary Cargo.toml update and dry-run check
-              # This uses cargo's index directly (same as cargo publish)
-              if [ "$VERSION_EXISTS" = "false" ]; then
-                # Save original Cargo.toml
-                cp Cargo.toml Cargo.toml.bak
-                # Temporarily update version for dry-run check
-                sed -i "s/^version = \".*\"/version = \"${VERSION}\"/" Cargo.toml
-                DRY_RUN_OUTPUT=$(cargo publish --dry-run --allow-dirty 2>&1 || true)
-                # Restore original Cargo.toml
-                mv Cargo.toml.bak Cargo.toml
-                
-                if echo "$DRY_RUN_OUTPUT" | grep -qiE "(already exists|already been uploaded|already exists on crates.io)"; then
-                  VERSION_EXISTS="true"
-                  echo "Found via cargo publish dry-run (cargo index check)"
-                fi
-              fi
-            fi
-            
-            if [ "$VERSION_EXISTS" = "true" ]; then
-              echo "⚠️  Version ${VERSION} already exists, incrementing..."
+            EXISTS_SDK=false
+            EXISTS_MACROS=false
+            crate_version_exists blvm-sdk "$VERSION" && EXISTS_SDK=true
+            crate_version_exists blvm-sdk-macros "$VERSION" && EXISTS_MACROS=true
+            if [ "$EXISTS_SDK" = true ] || [ "$EXISTS_MACROS" = true ]; then
+              echo "⚠️  blvm-sdk (${EXISTS_SDK}) or blvm-sdk-macros (${EXISTS_MACROS}) already has v${VERSION}; bumping patch..."
               MAJOR=$(echo "$VERSION" | cut -d. -f1)
               MINOR=$(echo "$VERSION" | cut -d. -f2)
               PATCH=$(echo "$VERSION" | cut -d. -f3)
@@ -502,7 +475,7 @@ jobs:
               VERSION="${MAJOR}.${MINOR}.${PATCH}"
               ATTEMPT=$((ATTEMPT + 1))
             else
-              echo "✅ Version ${VERSION} is available"
+              echo "✅ v${VERSION} is available for both crates"
               break
             fi
           done
@@ -512,11 +485,8 @@ jobs:
             exit 1
           fi
           
-          VERSION_TAG="v${VERSION}"
-          
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
-          echo "version_tag=${VERSION_TAG}" >> $GITHUB_OUTPUT
-          echo "✅ Releasing version: ${VERSION_TAG}"
+          echo "✅ Releasing version: ${VERSION}"
       
       - name: Get latest blvm-node version from crates.io
         id: node-version
@@ -534,16 +504,22 @@ jobs:
           VERSION="${{ steps.version.outputs.version }}"
           NODE_VER="${{ steps.node-version.outputs.version }}"
           
-          # Update version
+          # Root blvm-sdk version
           sed -i "s/^version = \".*\"/version = \"${VERSION}\"/" Cargo.toml
           
-          # Update blvm-node dependency to use crates.io version
+          # blvm-sdk-macros subcrate (same release version)
+          sed -i "s/^version = \".*\"/version = \"${VERSION}\"/" crates/blvm-sdk-macros/Cargo.toml
+          
+          # Path dep must match published macros version (exact pin)
+          sed -i 's|blvm-sdk-macros = { version = "=[^"]*", path = "./crates/blvm-sdk-macros" }|blvm-sdk-macros = { version = "='"${VERSION}"'", path = "./crates/blvm-sdk-macros" }|' Cargo.toml
+          
+          # blvm-node from crates.io
           sed -i 's|blvm-node = { path = "\.\./blvm-node"|blvm-node = "'"${NODE_VER}"'"|g' Cargo.toml
           
-          echo "Updated Cargo.toml:"
-          echo "  version: ${VERSION}"
-          echo "  blvm-node: ${NODE_VER}"
-          grep -E "^(version|blvm-node)" Cargo.toml
+          echo "Updated manifests for release ${VERSION}:"
+          grep -E "^version = " Cargo.toml crates/blvm-sdk-macros/Cargo.toml
+          grep "blvm-sdk-macros = " Cargo.toml
+          grep -E "^blvm-node" Cargo.toml
       
       - name: Check for crates.io token
         run: |
@@ -555,250 +531,111 @@ jobs:
       
       - name: Configure cargo for crates.io
         if: env.CARGO_REGISTRY_TOKEN != ''
-        run: |
-          cargo login "${CARGO_REGISTRY_TOKEN}"
-        env:
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: cargo login "${CARGO_REGISTRY_TOKEN}"
       
-      - name: Verify package
+      - name: Verify package manifests
         if: env.CARGO_REGISTRY_TOKEN != ''
         run: |
+          (cd crates/blvm-sdk-macros && cargo package --list)
           cargo package --list
       
-      - name: Dry-run publish
+      - name: Dry-run publish (macros, then SDK)
         if: env.CARGO_REGISTRY_TOKEN != ''
         run: |
-          cargo publish --dry-run
-        env:
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+          (cd crates/blvm-sdk-macros && cargo publish --dry-run --allow-dirty)
+          cargo publish --dry-run --allow-dirty
       
-      - name: Check if version already exists
+      - name: Check if versions already on crates.io
         if: env.CARGO_REGISTRY_TOKEN != ''
         id: check-version
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-          CRATE_NAME=$(grep -E '^name = ' Cargo.toml | sed -E 's/^name = "([^"]+)".*/\1/')
-          
-          echo "🔍 Checking if ${CRATE_NAME} v${VERSION} already exists on crates.io..."
-          
-          # Use crates.io API to check if version exists (more reliable than cargo search)
-          # The API returns versions in the "versions" array
-          API_RESPONSE=$(curl -s "https://crates.io/api/v1/crates/${CRATE_NAME}/versions" 2>/dev/null || echo "")
-          
-          if [ -z "$API_RESPONSE" ] || echo "$API_RESPONSE" | grep -q '"detail"'; then
-            echo "⚠️  Could not check crates.io API (crate may not exist yet), using cargo search as fallback"
-            # Fallback to cargo search - check all versions
-            SEARCH_OUTPUT=$(cargo search "$CRATE_NAME" --limit 100 2>/dev/null || echo "")
-            if echo "$SEARCH_OUTPUT" | grep -qE "\"${CRATE_NAME}\".*\"${VERSION}\""; then
-              echo "exists=true" >> $GITHUB_OUTPUT
-              echo "⚠️  Version ${VERSION} already published for ${CRATE_NAME} (found via cargo search)"
-            else
-              echo "exists=false" >> $GITHUB_OUTPUT
-              echo "✅ Version ${VERSION} not yet published for ${CRATE_NAME} (cargo search)"
-            fi
-          else
-            # Show existing versions for debugging
-            echo "📋 Existing versions on crates.io:"
-            if command -v jq &> /dev/null; then
-              echo "$API_RESPONSE" | jq -r ".versions[].num" | head -5
-            else
-              echo "$API_RESPONSE" | grep -o '"num":"[^"]*"' | sed 's/"num":"\(.*\)"/\1/' | head -5
-            fi
-            echo ""
-            
-            # Parse JSON to check if version exists (using jq if available, or grep as fallback)
-            if command -v jq &> /dev/null; then
-              VERSION_EXISTS=$(echo "$API_RESPONSE" | jq -r ".versions[] | select(.num == \"${VERSION}\") | .num" | head -1)
-              if [ "$VERSION_EXISTS" = "$VERSION" ]; then
-                echo "exists=true" >> $GITHUB_OUTPUT
-                echo "⚠️  Version ${VERSION} already published for ${CRATE_NAME} (found via API)"
-              else
-                echo "exists=false" >> $GITHUB_OUTPUT
-                echo "✅ Version ${VERSION} not yet published for ${CRATE_NAME} (API check)"
-              fi
-            else
-              # Fallback: grep for version in JSON
-              if echo "$API_RESPONSE" | grep -q "\"num\":\"${VERSION}\""; then
-                echo "exists=true" >> $GITHUB_OUTPUT
-                echo "⚠️  Version ${VERSION} already published for ${CRATE_NAME} (found via grep)"
-              else
-                echo "exists=false" >> $GITHUB_OUTPUT
-                echo "✅ Version ${VERSION} not yet published for ${CRATE_NAME} (grep check)"
+          for CRATE in blvm-sdk-macros blvm-sdk; do
+            API_RESPONSE=$(curl -s --max-time 10 "https://crates.io/api/v1/crates/${CRATE}/versions" 2>/dev/null || echo "")
+            EXISTS=false
+            if [ -n "$API_RESPONSE" ] && ! echo "$API_RESPONSE" | grep -q '"detail"'; then
+              if command -v jq &> /dev/null; then
+                V=$(echo "$API_RESPONSE" | jq -r ".versions[] | select(.num == \"${VERSION}\") | .num" | head -1)
+                [ "$V" = "$VERSION" ] && EXISTS=true
+              elif echo "$API_RESPONSE" | grep -q "\"num\":\"${VERSION}\""; then
+                EXISTS=true
               fi
             fi
-          fi
-          
-          echo ""
-          echo "📊 Version check result: ${{ steps.check-version.outputs.exists }}"
-        env:
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+            if [ "$CRATE" = "blvm-sdk-macros" ]; then
+              echo "macros_exists=${EXISTS}" >> $GITHUB_OUTPUT
+            else
+              echo "sdk_exists=${EXISTS}" >> $GITHUB_OUTPUT
+            fi
+            echo "  ${CRATE} v${VERSION} exists on crates.io: ${EXISTS}"
+          done
       
-      - name: Publish to crates.io
+      - name: Publish blvm-sdk-macros to crates.io
         if: env.CARGO_REGISTRY_TOKEN != ''
-        id: publish
+        id: publish_macros
         continue-on-error: true
         run: |
           set +e
           VERSION="${{ steps.version.outputs.version }}"
-          CRATE_NAME=$(grep -E '^name = ' Cargo.toml | sed -E 's/^name = "([^"]+)".*/\1/')
-          
-          echo "🔍 Publish Debug Info:"
-          echo "  Version: ${VERSION}"
-          echo "  Crate: ${CRATE_NAME}"
-          echo "  Version exists check: ${{ steps.check-version.outputs.exists }}"
-          
-          # Skip if version already exists
-          if [ "${{ steps.check-version.outputs.exists }}" = "true" ]; then
-            echo "⚠️  Version ${VERSION} already exists on crates.io, skipping publish"
+          if [ "${{ steps.check-version.outputs.macros_exists }}" = "true" ]; then
+            echo "Skipping blvm-sdk-macros (already published)"
+            echo "published=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          OUT=$(cd crates/blvm-sdk-macros && cargo publish --token "${CARGO_REGISTRY_TOKEN}" --allow-dirty 2>&1)
+          CODE=$?
+          echo "$OUT"
+          if [ $CODE -eq 0 ]; then
+            echo "published=true" >> $GITHUB_OUTPUT
+            echo "Waiting 45s for crates.io to index blvm-sdk-macros..."
+            sleep 45
+          elif echo "$OUT" | grep -qi "already exists"; then
+            echo "published=true" >> $GITHUB_OUTPUT
+            exit 0
+          else
             echo "published=false" >> $GITHUB_OUTPUT
             exit 0
           fi
-          
-          echo ""
-          echo "📦 Publishing ${CRATE_NAME} v${VERSION} to crates.io..."
-          echo "Running: cargo publish --token [REDACTED]"
-          
-          PUBLISH_OUTPUT=$(cargo publish --token "${CARGO_REGISTRY_TOKEN}" 2>&1)
-          PUBLISH_EXIT_CODE=$?
-          
-          echo ""
-          echo "📋 Publish Output:"
-          echo "$PUBLISH_OUTPUT"
-          echo ""
-          
-          if [ $PUBLISH_EXIT_CODE -eq 0 ]; then
-            echo "✅ Successfully published ${CRATE_NAME} v${VERSION}"
+      
+      - name: Publish blvm-sdk to crates.io
+        if: env.CARGO_REGISTRY_TOKEN != ''
+        id: publish_sdk
+        continue-on-error: true
+        run: |
+          set +e
+          VERSION="${{ steps.version.outputs.version }}"
+          if [ "${{ steps.check-version.outputs.sdk_exists }}" = "true" ]; then
+            echo "Skipping blvm-sdk (already published)"
             echo "published=true" >> $GITHUB_OUTPUT
-            echo "Waiting 30 seconds for crates.io to index..."
+            exit 0
+          fi
+          OUT=$(cargo publish --token "${CARGO_REGISTRY_TOKEN}" --allow-dirty 2>&1)
+          CODE=$?
+          echo "$OUT"
+          if [ $CODE -eq 0 ]; then
+            echo "published=true" >> $GITHUB_OUTPUT
+            echo "Waiting 30s for crates.io to index blvm-sdk..."
             sleep 30
-            echo "✅ Publish complete - version should be available on crates.io"
+          elif echo "$OUT" | grep -qi "already exists"; then
+            echo "published=true" >> $GITHUB_OUTPUT
+            exit 0
           else
-            # Check if error is due to version already existing
-            if echo "$PUBLISH_OUTPUT" | grep -qi "already exists"; then
-              echo "⚠️  Version ${VERSION} already exists on crates.io (detected during publish)"
-              echo "published=false" >> $GITHUB_OUTPUT
-              exit 0
-            else
-              echo "❌ Failed to publish ${CRATE_NAME} v${VERSION}"
-              echo "Exit code: $PUBLISH_EXIT_CODE"
-              echo "Error output:"
-              echo "$PUBLISH_OUTPUT"
-              echo ""
-              echo "⚠️  Publish failed - check error output above"
-              echo "published=false" >> $GITHUB_OUTPUT
-              # Don't exit with error code - let workflow continue
-              exit 0
-            fi
+            echo "published=false" >> $GITHUB_OUTPUT
+            exit 0
           fi
-        env:
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
       
-      - name: Verify published crate is available
-        if: |
-          env.CARGO_REGISTRY_TOKEN != '' &&
-          steps.publish.outputs.published == 'true'
+      - name: Verify published crates on crates.io
+        if: env.CARGO_REGISTRY_TOKEN != ''
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-          CRATE_NAME=$(grep -E '^name = ' Cargo.toml | sed -E 's/^name = "([^"]+)".*/\1/')
-          echo "Verifying ${CRATE_NAME} v${VERSION} is available on crates.io..."
-          
-          # Try to fetch the crate info
-          MAX_RETRIES=5
-          RETRY_COUNT=0
-          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-            if cargo search "$CRATE_NAME" --limit 1 2>/dev/null | grep -q "v${VERSION}"; then
-              echo "✅ ${CRATE_NAME} v${VERSION} is now available on crates.io"
-              echo "📦 Crate page: https://crates.io/crates/${CRATE_NAME}/${VERSION}"
-              break
-            else
-              RETRY_COUNT=$((RETRY_COUNT + 1))
-              if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
-                echo "⏳ Waiting for crates.io to index (attempt $RETRY_COUNT/$MAX_RETRIES)..."
-                sleep 10
-              else
-                echo "⚠️  ${CRATE_NAME} v${VERSION} not yet visible on crates.io (may take a few minutes)"
+          for CRATE in blvm-sdk-macros blvm-sdk; do
+            echo "Verifying ${CRATE} v${VERSION}..."
+            RETRY=0
+            while [ $RETRY -lt 5 ]; do
+              if cargo search "$CRATE" --limit 1 2>/dev/null | grep -q "${VERSION}"; then
+                echo "✅ https://crates.io/crates/${CRATE}/${VERSION}"
+                break
               fi
-            fi
+              RETRY=$((RETRY + 1))
+              [ $RETRY -lt 5 ] && sleep 10
+            done
           done
-      
-      - name: Create git tag
-        run: |
-          VERSION_TAG="${{ steps.version.outputs.version_tag }}"
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          
-          # Check if tag already exists
-          if git rev-parse "$VERSION_TAG" >/dev/null 2>&1; then
-            echo "⚠️  Tag ${VERSION_TAG} already exists, skipping tag creation"
-          else
-            git tag -a "$VERSION_TAG" -m "Release ${VERSION_TAG}"
-            git push origin "$VERSION_TAG"
-            echo "✅ Created and pushed tag ${VERSION_TAG}"
-          fi
-      
-      - name: Generate release notes
-        id: release_notes
-        run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          VERSION_TAG="${{ steps.version.outputs.version_tag }}"
-          CRATE_NAME=$(grep -E '^name = ' Cargo.toml | sed -E 's/^name = "([^"]+)".*/\1/')
-          DESCRIPTION=$(grep -E '^description = ' Cargo.toml | sed -E 's/^description = "([^"]+)".*/\1/' || echo "Bitcoin SDK")
-          
-          # Get commit range for this release
-          if [ -n "${{ github.event.before }}" ] && [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
-            COMMIT_RANGE="${{ github.event.before }}..${{ github.sha }}"
-            COMMIT_COUNT=$(git rev-list --count "$COMMIT_RANGE" 2>/dev/null || echo "?")
-          else
-            COMMIT_RANGE="HEAD~10..HEAD"
-            COMMIT_COUNT="?"
-          fi
-          
-          cat > /tmp/release_notes.md << EOF
-          ## $VERSION_TAG
-          
-          **$DESCRIPTION**
-          
-          ### 📦 Installation
-          
-          Add to your \`Cargo.toml\`:
-          
-          \`\`\`toml
-          [dependencies]
-          $CRATE_NAME = "$VERSION"
-          \`\`\`
-          
-          Or install via cargo:
-          
-          \`\`\`bash
-          cargo add $CRATE_NAME@$VERSION
-          \`\`\`
-          
-          ### 🔗 Links
-          
-          - **Crates.io**: [${CRATE_NAME} v${VERSION}](https://crates.io/crates/${CRATE_NAME}/${VERSION})
-          - **Documentation**: [docs.rs/${CRATE_NAME}/${VERSION}](https://docs.rs/${CRATE_NAME}/${VERSION})
-          - **Repository**: [GitHub](https://github.com/${{ github.repository }})
-          
-          ### 📝 Changes
-          
-          This release includes $COMMIT_COUNT commits since the last release.
-          
-          **Published to crates.io**: ${{ steps.publish.outputs.published == 'true' && '✅ Yes' || '⚠️  Already exists or skipped' }}
-          
-          See [full commit history](https://github.com/${{ github.repository }}/compare/$COMMIT_RANGE) for details.
-          EOF
-          
-          echo "notes<<EOF" >> $GITHUB_OUTPUT
-          cat /tmp/release_notes.md >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-      
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ${{ steps.version.outputs.version_tag }}
-          name: Release ${{ steps.version.outputs.version_tag }}
-          body: ${{ steps.release_notes.outputs.notes }}
-          draft: false
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,5 +1,10 @@
 # Bitcoin Commons Developer SDK
 
+[![crates.io](https://img.shields.io/crates/v/blvm-sdk.svg)](https://crates.io/crates/blvm-sdk)
+[![docs.rs](https://docs.rs/blvm-sdk/badge.svg)](https://docs.rs/blvm-sdk)
+[![CI](https://github.com/BTCDecoded/blvm-sdk/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/BTCDecoded/blvm-sdk/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
+
 Governance infrastructure and composition framework for Bitcoin implementations.
 
 > **For verified system status**: See [SYSTEM_STATUS.md](https://github.com/BTCDecoded/.github/blob/main/SYSTEM_STATUS.md) in the BTCDecoded organization repository.
