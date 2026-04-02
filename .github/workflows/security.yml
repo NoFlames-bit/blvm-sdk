@@ -14,6 +14,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
+
+      - name: Strip [patch.crates-io] for crates.io-only CI
+        uses: BTCDecoded/rust-ci/strip-patch-crates-io@main
       - name: Checkout blvm-protocol dependency
         uses: actions/checkout@v4
         with:
@@ -55,7 +58,7 @@ jobs:
           if [ -f "../blvm-node/Cargo.toml" ]; then echo "✅ blvm-node/Cargo.toml found"; else echo "ERROR: blvm-node/Cargo.toml not found!"; exit 1; fi
       
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@master
+        uses: BTCDecoded/rust-ci/install-rust-toolchain@main
         with:
           toolchain: 1.89.0
       - name: Cache cargo registry

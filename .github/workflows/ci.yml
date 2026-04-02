@@ -39,15 +39,13 @@ jobs:
       cache-key: ${{ steps.setup-cache.outputs.cache-key }}
     steps:
       - name: Disk check
-        run: |
-          df -h
-          if [ $(df / | tail -1 | awk '{print $5}' | sed 's/%//') -gt 80 ]; then
-            find /tmp/runner-cache -maxdepth 2 -type d -mtime +7 -exec rm -rf {} + 2>/dev/null || true
-            df -h
-          fi
+        uses: BTCDecoded/rust-ci/runner-disk-guard@main
 
       - uses: actions/checkout@v4
       
+
+      - name: Strip [patch.crates-io] for crates.io-only CI
+        uses: BTCDecoded/rust-ci/strip-patch-crates-io@main
       - name: Cache
         id: setup-cache
         run: |
@@ -73,9 +71,7 @@ jobs:
           mkdir -p "$CARGO_CACHE_DIR"/{registry,git} "$TARGET_CACHE_DIR"
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: 1.88.0
+        uses: BTCDecoded/rust-ci/install-rust-toolchain@main
 
   test:
     name: Test
@@ -90,43 +86,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
+
+      - name: Strip [patch.crates-io] for crates.io-only CI
+        uses: BTCDecoded/rust-ci/strip-patch-crates-io@main
       - name: Cache
-        run: |
-          CACHE_ROOT="/tmp/runner-cache"
-          CACHE_KEY="${{ needs.setup.outputs.cache-key }}"
-          echo "CARGO_CACHE_DIR=$CACHE_ROOT/cargo/$CACHE_KEY" >> $GITHUB_ENV
-          echo "TARGET_CACHE_DIR=$CACHE_ROOT/target/$CACHE_KEY" >> $GITHUB_ENV
-      
-      - name: Restore registry
-        run: |
-          if [ -d "$CARGO_CACHE_DIR/registry" ] && [ "$(ls -A $CARGO_CACHE_DIR/registry 2>/dev/null)" ]; then
-            mkdir -p "$HOME/.cargo/registry"
-            rsync -a --delete "$CARGO_CACHE_DIR/registry/" "$HOME/.cargo/registry/" || true
-          else
-            echo "💿 No Cargo registry cache found"
-          fi
-      
-      - name: Restore git
-        run: |
-          if [ -d "$CARGO_CACHE_DIR/git" ] && [ "$(ls -A $CARGO_CACHE_DIR/git 2>/dev/null)" ]; then
-            mkdir -p "$HOME/.cargo/git"
-            rsync -a --delete "$CARGO_CACHE_DIR/git/" "$HOME/.cargo/git/" || true
-          else
-            echo "💿 No Cargo git cache found"
-          fi
-      
-      - name: Restore target
-        run: |
-          if [ -d "$TARGET_CACHE_DIR" ] && [ "$(ls -A $TARGET_CACHE_DIR 2>/dev/null)" ]; then
-            rsync -a --delete "$TARGET_CACHE_DIR/" ./target/ || true
-          else
-            echo "💿 No target cache found, will build from scratch"
-          fi
-      
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@master
+        uses: BTCDecoded/rust-ci/runner-cargo-cache@main
         with:
-          toolchain: 1.88.0
+          operation: bind-env
+          cache-key: ${{ needs.setup.outputs.cache-key }}
+
+      - name: Restore Cargo cache
+        uses: BTCDecoded/rust-ci/runner-cargo-cache@main
+        with:
+          operation: restore
+
+      - name: Install Rust
+        uses: BTCDecoded/rust-ci/install-rust-toolchain@main
       
       - name: Run tests with coverage
         run: |
@@ -143,34 +118,17 @@ jobs:
         with:
           file: coverage/cobertura.xml
       
-      - name: Cache registry
+      - name: Save Cargo cache
         if: always()
-        run: |
-          if [ -d "$HOME/.cargo/registry" ] && [ "$CARGO_CACHE_DIR" != "" ]; then
-            rsync -a --delete "$HOME/.cargo/registry/" "$CARGO_CACHE_DIR/registry/" || true
-          fi
-      
-      - name: Cache git
+        uses: BTCDecoded/rust-ci/runner-cargo-cache@main
+        with:
+          operation: save
+
+      - name: Prune old runner caches
         if: always()
-        run: |
-          if [ -d "$HOME/.cargo/git" ] && [ "$CARGO_CACHE_DIR" != "" ]; then
-            rsync -a --delete "$HOME/.cargo/git/" "$CARGO_CACHE_DIR/git/" || true
-          fi
-      
-      - name: Cache target
-        if: always()
-        run: |
-          if [ -d "./target" ] && [ "$TARGET_CACHE_DIR" != "" ]; then
-            rsync -a --delete "./target/" "$TARGET_CACHE_DIR/" || true
-          fi
-      
-      - name: Cleanup
-        if: always()
-        run: |
-          echo "🧹 Cleaning up old caches..."
-          CACHE_ROOT="/tmp/runner-cache"
-          find "$CACHE_ROOT/cargo" -maxdepth 1 -type d -mtime +1 2>/dev/null | head -n -5 | xargs rm -rf 2>/dev/null || true
-          find "$CACHE_ROOT/target" -maxdepth 1 -type d -mtime +1 2>/dev/null | head -n -3 | xargs rm -rf 2>/dev/null || true
+        uses: BTCDecoded/rust-ci/runner-cargo-cache@main
+        with:
+          operation: prune
 
   clippy:
     name: Clippy
@@ -185,30 +143,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
+
+      - name: Strip [patch.crates-io] for crates.io-only CI
+        uses: BTCDecoded/rust-ci/strip-patch-crates-io@main
       - name: Cache
-        run: |
-          CACHE_ROOT="/tmp/runner-cache"
-          CACHE_KEY="${{ needs.setup.outputs.cache-key }}"
-          echo "CARGO_CACHE_DIR=$CACHE_ROOT/cargo/$CACHE_KEY" >> $GITHUB_ENV
-      
-      - name: Restore registry
-        run: |
-          if [ -d "$CARGO_CACHE_DIR/registry" ] && [ "$(ls -A $CARGO_CACHE_DIR/registry 2>/dev/null)" ]; then
-            mkdir -p "$HOME/.cargo/registry"
-            rsync -a --delete "$CARGO_CACHE_DIR/registry/" "$HOME/.cargo/registry/" || true
-          fi
-      
-      - name: Restore git
-        run: |
-          if [ -d "$CARGO_CACHE_DIR/git" ] && [ "$(ls -A $CARGO_CACHE_DIR/git 2>/dev/null)" ]; then
-            mkdir -p "$HOME/.cargo/git"
-            rsync -a --delete "$CARGO_CACHE_DIR/git/" "$HOME/.cargo/git/" || true
-          fi
-      
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@master
+        uses: BTCDecoded/rust-ci/runner-cargo-cache@main
         with:
-          toolchain: 1.88.0
+          operation: bind-env
+          cache-key: ${{ needs.setup.outputs.cache-key }}
+          include-target: false
+
+      - name: Restore Cargo cache
+        uses: BTCDecoded/rust-ci/runner-cargo-cache@main
+        with:
+          operation: restore
+
+      - name: Install Rust
+        uses: BTCDecoded/rust-ci/install-rust-toolchain@main
       
       - name: Run clippy
         run: |
@@ -231,10 +182,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
+
+      - name: Strip [patch.crates-io] for crates.io-only CI
+        uses: BTCDecoded/rust-ci/strip-patch-crates-io@main
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: 1.88.0
+        uses: BTCDecoded/rust-ci/install-rust-toolchain@main
       
       - name: Check formatting
         run: |
@@ -257,30 +209,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
+
+      - name: Strip [patch.crates-io] for crates.io-only CI
+        uses: BTCDecoded/rust-ci/strip-patch-crates-io@main
       - name: Cache
-        run: |
-          CACHE_ROOT="/tmp/runner-cache"
-          CACHE_KEY="${{ needs.setup.outputs.cache-key }}"
-          echo "CARGO_CACHE_DIR=$CACHE_ROOT/cargo/$CACHE_KEY" >> $GITHUB_ENV
-      
-      - name: Restore registry
-        run: |
-          if [ -d "$CARGO_CACHE_DIR/registry" ] && [ "$(ls -A $CARGO_CACHE_DIR/registry 2>/dev/null)" ]; then
-            mkdir -p "$HOME/.cargo/registry"
-            rsync -a --delete "$CARGO_CACHE_DIR/registry/" "$HOME/.cargo/registry/" || true
-          fi
-      
-      - name: Restore git
-        run: |
-          if [ -d "$CARGO_CACHE_DIR/git" ] && [ "$(ls -A $CARGO_CACHE_DIR/git 2>/dev/null)" ]; then
-            mkdir -p "$HOME/.cargo/git"
-            rsync -a --delete "$CARGO_CACHE_DIR/git/" "$HOME/.cargo/git/" || true
-          fi
-      
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@master
+        uses: BTCDecoded/rust-ci/runner-cargo-cache@main
         with:
-          toolchain: 1.88.0
+          operation: bind-env
+          cache-key: ${{ needs.setup.outputs.cache-key }}
+          include-target: false
+
+      - name: Restore Cargo cache
+        uses: BTCDecoded/rust-ci/runner-cargo-cache@main
+        with:
+          operation: restore
+
+      - name: Install Rust
+        uses: BTCDecoded/rust-ci/install-rust-toolchain@main
       
       - name: Build docs
         run: cargo doc --no-deps
@@ -300,10 +245,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
+
+      - name: Strip [patch.crates-io] for crates.io-only CI
+        uses: BTCDecoded/rust-ci/strip-patch-crates-io@main
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: 1.88.0
+        uses: BTCDecoded/rust-ci/install-rust-toolchain@main
       
       - name: Install cargo-audit
         run: cargo install cargo-audit --version 0.21.0 --locked
@@ -336,47 +282,32 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
+
+      - name: Strip [patch.crates-io] for crates.io-only CI
+        uses: BTCDecoded/rust-ci/strip-patch-crates-io@main
       - name: Cache
-        run: |
-          CACHE_ROOT="/tmp/runner-cache"
-          CACHE_KEY="${{ needs.setup.outputs.cache-key }}"
-          echo "CARGO_CACHE_DIR=$CACHE_ROOT/cargo/$CACHE_KEY" >> $GITHUB_ENV
-          echo "TARGET_CACHE_DIR=$CACHE_ROOT/target/$CACHE_KEY" >> $GITHUB_ENV
-      
-      - name: Restore registry
-        run: |
-          if [ -d "$CARGO_CACHE_DIR/registry" ] && [ "$(ls -A $CARGO_CACHE_DIR/registry 2>/dev/null)" ]; then
-            mkdir -p "$HOME/.cargo/registry"
-            rsync -a --delete "$CARGO_CACHE_DIR/registry/" "$HOME/.cargo/registry/" || true
-          fi
-      
-      - name: Restore git
-        run: |
-          if [ -d "$CARGO_CACHE_DIR/git" ] && [ "$(ls -A $CARGO_CACHE_DIR/git 2>/dev/null)" ]; then
-            mkdir -p "$HOME/.cargo/git"
-            rsync -a --delete "$CARGO_CACHE_DIR/git/" "$HOME/.cargo/git/" || true
-          fi
-      
-      - name: Restore target
-        run: |
-          if [ -d "$TARGET_CACHE_DIR" ] && [ "$(ls -A $TARGET_CACHE_DIR 2>/dev/null)" ]; then
-            rsync -a --delete "$TARGET_CACHE_DIR/" ./target/ || true
-          fi
-      
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@master
+        uses: BTCDecoded/rust-ci/runner-cargo-cache@main
         with:
-          toolchain: 1.88.0
+          operation: bind-env
+          cache-key: ${{ needs.setup.outputs.cache-key }}
+
+      - name: Restore Cargo cache
+        uses: BTCDecoded/rust-ci/runner-cargo-cache@main
+        with:
+          operation: restore
+
+      - name: Install Rust
+        uses: BTCDecoded/rust-ci/install-rust-toolchain@main
       
       - name: Build
         run: cargo build --release
       
       - name: Cache target
         if: always()
-        run: |
-          if [ -d "./target" ] && [ "$TARGET_CACHE_DIR" != "" ]; then
-            rsync -a --delete "./target/" "$TARGET_CACHE_DIR/" || true
-          fi
+        uses: BTCDecoded/rust-ci/runner-cargo-cache@main
+        with:
+          operation: save
+          save-target-only: true
 
   release:
     name: Release
@@ -406,10 +337,11 @@ jobs:
         with:
           fetch-depth: 0
       
+
+      - name: Strip [patch.crates-io] for crates.io-only CI
+        uses: BTCDecoded/rust-ci/strip-patch-crates-io@main
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: 1.88.0
+        uses: BTCDecoded/rust-ci/install-rust-toolchain@main
       
       - name: Determine version
         id: version
@@ -580,7 +512,6 @@ jobs:
       - name: Publish blvm-sdk-macros to crates.io
         if: env.CARGO_REGISTRY_TOKEN != ''
         id: publish_macros
-        continue-on-error: true
         run: |
           set +e
           VERSION="${{ steps.version.outputs.version }}"
@@ -601,13 +532,13 @@ jobs:
             exit 0
           else
             echo "published=false" >> $GITHUB_OUTPUT
-            exit 0
+            echo "::error::cargo publish failed for blvm-sdk-macros (see log above)"
+            exit 1
           fi
       
       - name: Publish blvm-sdk to crates.io
         if: env.CARGO_REGISTRY_TOKEN != ''
         id: publish_sdk
-        continue-on-error: true
         run: |
           set +e
           VERSION="${{ steps.version.outputs.version }}"
@@ -628,7 +559,8 @@ jobs:
             exit 0
           else
             echo "published=false" >> $GITHUB_OUTPUT
-            exit 0
+            echo "::error::cargo publish failed for blvm-sdk (see log above)"
+            exit 1
           fi
       
       - name: Verify published crates on crates.io
