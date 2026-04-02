@@ -39,7 +39,7 @@ rand = "=0.8.5"
 chrono = { version = "=0.4.35", features = ["serde"] }
 
 # CLI dependencies
-blvm-sdk-macros = { version = "=0.1.0", path = "./crates/blvm-sdk-macros" }
+blvm-sdk-macros = { version = ">=0.1, <1", path = "./crates/blvm-sdk-macros" }
 clap = { version = "=4.4.11", features = ["derive"] }
 
 # Composition framework dependencies
